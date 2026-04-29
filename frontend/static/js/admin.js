@@ -227,6 +227,17 @@ class AdminPanel {
             scanBtn.addEventListener('click', () => this.scanMedia());
         }
 
+        // Thumbnail management buttons
+        const generateMissingBtn = document.getElementById('generate-missing-thumbnails-btn');
+        if (generateMissingBtn) {
+            generateMissingBtn.addEventListener('click', () => this.generateMissingThumbnails());
+        }
+
+        const regenerateAllBtn = document.getElementById('regenerate-all-thumbnails-btn');
+        if (regenerateAllBtn) {
+            regenerateAllBtn.addEventListener('click', () => this.regenerateAllThumbnails());
+        }
+
         // Add tags form
         const addTagsForm = document.getElementById('add-tags-form');
         if (addTagsForm) {
@@ -1021,6 +1032,81 @@ class AdminPanel {
             scanBtn.disabled = false;
             scanBtn.textContent = originalText;
         }
+    }
+
+    async generateMissingThumbnails() {
+        const btn = document.getElementById('generate-missing-thumbnails-btn');
+        const allBtn = document.getElementById('regenerate-all-thumbnails-btn');
+        const statusDiv = document.getElementById('thumbnail-regen-status');
+        const resultDiv = document.getElementById('thumbnail-regen-result');
+        const originalText = btn.textContent;
+
+        btn.disabled = true;
+        allBtn.disabled = true;
+        btn.textContent = window.i18n.t('admin.media_management.thumbnails.generating');
+        statusDiv.style.display = 'block';
+        resultDiv.innerHTML = `<div class="bg-primary primary-text p-3"><strong>${window.i18n.t('admin.media_management.thumbnails.generating')}</strong></div>`;
+
+        try {
+            const result = await app.apiCall('/api/admin/generate-missing-thumbnails', { method: 'POST' });
+            const msg = window.i18n.t('admin.media_management.thumbnails.done_missing', {
+                orphans_deleted: result.orphans_deleted,
+                generated: result.generated,
+                skipped: result.skipped,
+                failed: result.failed,
+            });
+            resultDiv.innerHTML = `<div class="bg-success p-3 tag-text"><strong>${msg}</strong></div>`;
+        } catch (error) {
+            resultDiv.innerHTML = `<div class="bg-danger p-3 tag-text"><strong>Error:</strong> ${error.message}</div>`;
+        } finally {
+            btn.disabled = false;
+            allBtn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+
+    async regenerateAllThumbnails() {
+        const modal = new ModalHelper({
+            id: 'regenerate-thumbnails-modal',
+            type: 'danger',
+            title: window.i18n.t('modal.regenerate_thumbnails.title'),
+            message: window.i18n.t('modal.regenerate_thumbnails.message'),
+            confirmText: window.i18n.t('modal.regenerate_thumbnails.confirm'),
+            cancelText: window.i18n.t('common.cancel'),
+            confirmId: 'regenerate-thumbnails-confirm-yes',
+            cancelId: 'regenerate-thumbnails-confirm-no',
+            onConfirm: async () => {
+                const btn = document.getElementById('regenerate-all-thumbnails-btn');
+                const missingBtn = document.getElementById('generate-missing-thumbnails-btn');
+                const statusDiv = document.getElementById('thumbnail-regen-status');
+                const resultDiv = document.getElementById('thumbnail-regen-result');
+                const originalText = btn.textContent;
+
+                btn.disabled = true;
+                missingBtn.disabled = true;
+                btn.textContent = window.i18n.t('admin.media_management.thumbnails.generating');
+                statusDiv.style.display = 'block';
+                resultDiv.innerHTML = `<div class="bg-primary primary-text p-3"><strong>${window.i18n.t('admin.media_management.thumbnails.generating')}</strong></div>`;
+
+                try {
+                    const result = await app.apiCall('/api/admin/regenerate-all-thumbnails', { method: 'POST' });
+                    const msg = window.i18n.t('admin.media_management.thumbnails.done_all', {
+                        deleted: result.deleted,
+                        generated: result.generated,
+                        failed: result.failed,
+                    });
+                    resultDiv.innerHTML = `<div class="bg-success p-3 tag-text"><strong>${msg}</strong></div>`;
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="bg-danger p-3 tag-text"><strong>Error:</strong> ${error.message}</div>`;
+                } finally {
+                    btn.disabled = false;
+                    missingBtn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            }
+        });
+
+        modal.show();
     }
 
     setupTagManagement() {
