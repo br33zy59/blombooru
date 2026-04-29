@@ -1121,16 +1121,16 @@ class AdminPanel {
 
         uploadArea?.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadArea.style.backgroundColor = '#334155';
+            uploadArea.classList.add('drag-over');
         });
 
         uploadArea?.addEventListener('dragleave', () => {
-            uploadArea.style.backgroundColor = '';
+            uploadArea.classList.remove('drag-over');
         });
 
         uploadArea?.addEventListener('drop', (e) => {
             e.preventDefault();
-            uploadArea.style.backgroundColor = '';
+            uploadArea.classList.remove('drag-over');
 
             const files = e.dataTransfer.files;
             if (files.length > 0) {
@@ -1152,16 +1152,16 @@ class AdminPanel {
 
         fullImportArea?.addEventListener('dragover', (e) => {
             e.preventDefault();
-            fullImportArea.style.backgroundColor = '#334155';
+            fullImportArea.classList.add('drag-over');
         });
 
         fullImportArea?.addEventListener('dragleave', () => {
-            fullImportArea.style.backgroundColor = '';
+            fullImportArea.classList.remove('drag-over');
         });
 
         fullImportArea?.addEventListener('drop', (e) => {
             e.preventDefault();
-            fullImportArea.style.backgroundColor = '';
+            fullImportArea.classList.remove('drag-over');
 
             if (e.dataTransfer.files.length > 0) {
                 this.uploadFullBackup(e.dataTransfer.files[0]);
