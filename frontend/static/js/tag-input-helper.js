@@ -308,6 +308,11 @@ class TagInputHelper {
 
         if (!inputElement) return;
 
+        // Strip IDE-injected whitespace (newlines/indents) from empty inputs
+        if (inputElement.textContent.trim() === '') {
+            inputElement.innerHTML = '';
+        }
+
         // Pre-load implications cache so expansion fires instantly on first use
         if (expandImplications) {
             this.loadImplications();
