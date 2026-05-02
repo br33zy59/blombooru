@@ -14,6 +14,7 @@ class Uploader {
         this.baseRatingSelect = null;
         this.individualRatingSelect = null;
         this.fullscreenViewer = new FullscreenMediaViewer();
+        this.mediaTypeTags = { image: [], gif: [], video: [] };
 
         if (this.uploadArea) {
             this.init();
@@ -27,6 +28,85 @@ class Uploader {
         this.createPreviewGrid();
         this.createSubmitControls();
         this.loadAlbums();
+        this.loadMediaTypeTags();
+    }
+
+    async loadMediaTypeTags() {
+        try {
+            const response = await fetch('/api/admin/settings');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.media_type_tags) {
+                    this.mediaTypeTags = {
+                        image: data.media_type_tags.image || [],
+                        gif:   data.media_type_tags.gif   || [],
+                        video: data.media_type_tags.video || []
+                    };
+                }
+            }
+        } catch (error) {
+            // Non-critical: silently fall back to empty auto-tags
+        }
+    }
+
+    async isAnimatedWebP(file) {
+        if (file.type !== 'image/webp' && !file.name.toLowerCase().endsWith('.webp')) {
+            return false;
+        }
+
+        try {
+            const buffer = await file.slice(0, 1024).arrayBuffer();
+            const arr = new Uint8Array(buffer);
+            if (arr.length < 12) return false;
+
+            // Check RIFF and WEBP headers
+            const isRiff = arr[0] === 82 && arr[1] === 73 && arr[2] === 70 && arr[3] === 70;
+            const isWebp = arr[8] === 87 && arr[9] === 69 && arr[10] === 66 && arr[11] === 80;
+
+            if (!isRiff || !isWebp) return false;
+
+            // Look for ANIM chunk in the first 1KB
+            for (let i = 12; i < arr.length - 3; i++) {
+                if (arr[i] === 65 && arr[i+1] === 78 && arr[i+2] === 73 && arr[i+3] === 77) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (e) {
+            console.error('Error checking if WebP is animated:', e);
+            return false;
+        }
+    }
+
+    async getAutoTagsForFile(file) {
+        let fileType = 'image';
+        
+        if (file.type.startsWith('video/')) {
+            fileType = 'video';
+        } else if (file.type === 'image/gif') {
+            fileType = 'gif';
+        } else if (file.type === 'image/webp' || file.name.toLowerCase().endsWith('.webp')) {
+            const animated = await this.isAnimatedWebP(file);
+            fileType = animated ? 'gif' : 'image';
+        } else if (file.type.startsWith('image/')) {
+            fileType = 'image';
+        } else {
+            const ext = file.name.toLowerCase().split('.').pop();
+            if (['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext)) {
+                fileType = 'video';
+            } else if (ext === 'gif') {
+                fileType = 'gif';
+            } else {
+                fileType = 'image';
+            }
+        }
+
+        if (fileType === 'gif') {
+            return [...this.mediaTypeTags.gif];
+        } else if (fileType === 'video') {
+            return [...this.mediaTypeTags.video];
+        }
+        return [...this.mediaTypeTags.image];
     }
 
     async loadAlbums() {
@@ -546,7 +626,7 @@ class Uploader {
                     hash: hash,
                     rating: this.baseRating,
                     source: this.baseSource,
-                    additionalTags: [],
+                    additionalTags: await this.getAutoTagsForFile(file),
                     individualAlbumIds: new Set(),
                     preview: null,
                     scannedPath: null
@@ -653,7 +733,7 @@ class Uploader {
                         hash: hash,
                         rating: this.baseRating,
                         source: this.baseSource,
-                        additionalTags: [],
+                        additionalTags: await this.getAutoTagsForFile(file),
                         individualAlbumIds: new Set(),
                         preview: null,
                         scannedPath: null
@@ -1095,7 +1175,7 @@ class Uploader {
                 hash: hash,
                 rating: this.baseRating,
                 source: this.baseSource,
-                additionalTags: [],
+                additionalTags: await this.getAutoTagsForFile(file),
                 individualAlbumIds: new Set(),
                 preview: null,
                 scannedPath: originalPath
