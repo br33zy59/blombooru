@@ -137,6 +137,7 @@ class SettingsUpdate(BaseModel):
     shared_tags: Optional[SharedTagSettings] = None
     sidebar_filter_mode: Optional[str] = None
     sidebar_custom_buttons: Optional[List[dict]] = None
+    media_type_tags: Optional[dict] = None
 
 class ShareSettingsUpdate(BaseModel):
     share_ai_metadata: Optional[bool] = None

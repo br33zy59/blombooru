@@ -9,7 +9,7 @@ from sqlalchemy.engine import URL
 load_dotenv()
 
 APP_VERSION = "1.39.0"
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 class Settings:
     def __init__(self):
@@ -85,6 +85,7 @@ class Settings:
             "default_order": "desc",
             "sidebar_filter_mode": "rating",
             "sidebar_custom_buttons": [],
+            "media_type_tags": {"image": [], "gif": [], "video": []},
             "secret_key": os.urandom(32).hex()
         }
     
@@ -242,6 +243,14 @@ class Settings:
         if val is not None:
             return val
         return self.settings.get("sidebar_custom_buttons", [])
+
+    @property
+    def MEDIA_TYPE_TAGS(self) -> dict:
+        """Get per-media-type automatic upload tags: {image: [...], gif: [...], video: [...]}"""
+        val = self.file_settings.get("media_type_tags")
+        if val is not None:
+            return val
+        return self.settings.get("media_type_tags", {"image": [], "gif": [], "video": []})
     
     @property
     def SHARED_TAGS_ENABLED(self) -> bool:
