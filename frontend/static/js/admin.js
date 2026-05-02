@@ -87,6 +87,17 @@ class AdminPanel {
         if (addCustomButtonBtn) {
             addCustomButtonBtn.addEventListener('click', () => this.addCustomButton());
         }
+
+        // Media type tag inputs
+        const mediaTypeTagIds = ['media-type-tags-image', 'media-type-tags-gif', 'media-type-tags-video'];
+        mediaTypeTagIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            this.tagInputHelper.setupTagInput(el, id, { onValidate: () => { } });
+            if (typeof TagAutocomplete !== 'undefined') {
+                new TagAutocomplete(el, { multipleValues: true });
+            }
+        });
     }
 
     cleanupCustomButtons() {
@@ -845,6 +856,20 @@ class AdminPanel {
                 }
             }
 
+            // Load media_type_tags settings
+            if (settings.media_type_tags) {
+                const types = ['image', 'gif', 'video'];
+                types.forEach(type => {
+                    const el = document.getElementById(`media-type-tags-${type}`);
+                    if (el) {
+                        const tags = settings.media_type_tags[type];
+                        if (Array.isArray(tags) && tags.length > 0) {
+                            el.textContent = tags.join(' ');
+                            setTimeout(() => this.tagInputHelper.validateAndStyleTags(el), 100);
+                        }
+                    }
+                });
+            }
         } catch (error) {
             console.error('Error loading settings:', error);
         }
@@ -905,6 +930,14 @@ class AdminPanel {
             return;
         }
 
+        // Collect media_type_tags
+        const getMediaTypeTags = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return [];
+            const text = this.tagInputHelper.getPlainTextFromDiv(el);
+            return text.split(/\s+/).filter(t => t.length > 0);
+        };
+
         const settings = {
             app_name: appName,
             theme: theme,
@@ -924,7 +957,12 @@ class AdminPanel {
                 password: document.getElementById('shared-tags-password')?.value || ''
             },
             sidebar_filter_mode: sidebarMode,
-            sidebar_custom_buttons: validButtons
+            sidebar_custom_buttons: validButtons,
+            media_type_tags: {
+                image: getMediaTypeTags('media-type-tags-image'),
+                gif: getMediaTypeTags('media-type-tags-gif'),
+                video: getMediaTypeTags('media-type-tags-video')
+            }
         };
 
         try {
