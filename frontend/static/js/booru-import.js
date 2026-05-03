@@ -127,11 +127,11 @@ class BooruImporter {
 
         const categoryOrder = ['artist', 'copyright', 'character', 'general', 'meta'];
         let tagCategoryHtml = '';
-        
+
         if (unconfirmedTags.length > 0) {
             tagCategoryHtml += `
                 <div class="flex flex-wrap gap-1 w-full mb-3 pb-2 border-b">
-                    ${unconfirmedTags.map(t => this.renderDropdownTag(t, 'opacity-60 grayscale ' + t.category)).join('')}
+                    ${unconfirmedTags.map(t => this.renderDropdownTag(t, 'grayscale ' + t.category)).join('')}
                 </div>
             `;
         }
