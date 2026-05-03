@@ -63,9 +63,9 @@
             "shown_once": "VISAS EN GÅNG",
             "store_securely": "Spara denna nyckel säkert. Den visas inte igen efter att du uppdaterar eller lämnar denna sida.",
             "title": "API-åtkomst",
-            "revoke_key": "",
-            "created_at": "",
-            "last_used": ""
+            "revoke_key": "ÅTERKALLA",
+            "created_at": "Skapad:",
+            "last_used": "Senast använd:"
         },
         "backup": {
             "drop_backup": "Släpp fullständig säkerhetskopia (ZIP) här eller klicka för att bläddra",
