@@ -38,6 +38,18 @@ class ImportRequest(BaseModel):
     auto_create_tags: bool = False
     category_hints: Optional[dict[str, str]] = None
 
+def _enrich_post_tags_with_db_categories(post: BooruPost, db: Session):
+    if not post.tags:
+        return
+    tag_names = [t.name.lower() for t in post.tags]
+    from sqlalchemy import func
+    existing_tags = db.query(Tag).filter(func.lower(Tag.name).in_(tag_names)).all()
+    tag_category_map = {tag.name.lower(): tag.category for tag in existing_tags}
+    for t in post.tags:
+        if t.name.lower() in tag_category_map:
+            t.category = tag_category_map[t.name.lower()]
+            t.is_new = False
+
 @router.post("/fetch")
 async def fetch_booru_post(
     req: FetchRequest,
@@ -59,6 +71,7 @@ async def fetch_booru_post(
 
     try:
         post = client.fetch_post_by_url(req.url)
+        _enrich_post_tags_with_db_categories(post, db)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=safe_error_detail("Invalid request", e))
     except requests.HTTPError as e:
@@ -72,7 +85,7 @@ async def fetch_booru_post(
 
     return {
         "id": post.id,
-        "tags": [{"name": t.name, "category": t.category} for t in post.tags],
+        "tags": [{"name": t.name, "category": t.category, "is_new": getattr(t, "is_new", True)} for t in post.tags],
         "rating": post.rating,
         "source": post.source,
         "file_url": post.file_url,
@@ -107,6 +120,7 @@ async def download_and_import(
 
     try:
         post = client.fetch_post_by_url(req.url)
+        _enrich_post_tags_with_db_categories(post, db)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=safe_error_detail("Invalid request", e))
     except requests.HTTPError as e:

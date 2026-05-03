@@ -114,22 +114,34 @@ class BooruImporter {
         const sortedTags = this.sortPostTags(post.tags);
         const tagsText = sortedTags.map(t => t.name).join(' ');
 
+        const unconfirmedTags = sortedTags.filter(t => t.is_new && !t.user_assigned);
+        const categorizedTags = sortedTags.filter(t => !t.is_new || t.user_assigned);
+
         const tagsByCategory = {};
-        for (const tag of sortedTags) {
+        for (const tag of categorizedTags) {
             if (!tagsByCategory[tag.category]) {
                 tagsByCategory[tag.category] = [];
             }
-            tagsByCategory[tag.category].push(tag.name);
+            tagsByCategory[tag.category].push(tag);
         }
 
         const categoryOrder = ['artist', 'copyright', 'character', 'general', 'meta'];
         let tagCategoryHtml = '';
+        
+        if (unconfirmedTags.length > 0) {
+            tagCategoryHtml += `
+                <div class="flex flex-wrap gap-1 w-full mb-3 pb-2 border-b">
+                    ${unconfirmedTags.map(t => this.renderDropdownTag(t, 'opacity-60 grayscale ' + t.category)).join('')}
+                </div>
+            `;
+        }
+
         for (const cat of categoryOrder) {
             const catTags = tagsByCategory[cat];
             if (catTags && catTags.length > 0) {
                 tagCategoryHtml += `
                     <div class="flex flex-wrap gap-1 w-full">
-                        ${catTags.map(t => `<span class="text-xs tag-text tag ${cat}">${this.escapeHtml(t)}</span>`).join('')}
+                        ${catTags.map(t => t.is_new ? this.renderDropdownTag(t, cat) : `<span class="text-xs tag-text tag ${cat}">${this.escapeHtml(t.name)}</span>`).join('')}
                     </div>
                 `;
             }
@@ -186,10 +198,9 @@ class BooruImporter {
                             </div>
                         </div>
 
-                        <!-- Tags by category -->
                         <div class="mb-3">
                             <div class="text-xs font-bold mb-1">${window.i18n.t('common.tags')}</div>
-                            <div class="max-h-40 overflow-y-auto p-2 surface border flex flex-wrap gap-2">
+                            <div class="p-2 surface border flex flex-wrap gap-2">
                                 ${tagCategoryHtml}
                             </div>
                         </div>
@@ -228,6 +239,23 @@ class BooruImporter {
         const ratingSelectEl = this.previewArea.querySelector('#booru-rating-select');
         if (ratingSelectEl && typeof CustomSelect !== 'undefined') {
             new CustomSelect(ratingSelectEl);
+        }
+
+        const tagSelects = this.previewArea.querySelectorAll('.booru-tag-select');
+        if (typeof CustomSelect !== 'undefined') {
+            tagSelects.forEach(el => {
+                new CustomSelect(el);
+                el.addEventListener('change', (e) => {
+                    const tagName = el.dataset.tag;
+                    const newCategory = e.detail.value;
+                    const tag = this.currentPost.tags.find(t => t.name === tagName);
+                    if (tag) {
+                        tag.category = newCategory;
+                        tag.user_assigned = true;
+                        this.renderPreview();
+                    }
+                });
+            });
         }
 
         // Setup fullscreen click on image
@@ -483,6 +511,25 @@ class BooruImporter {
             if (catA !== catB) return catA - catB;
             return a.name.localeCompare(b.name);
         });
+    }
+
+    renderDropdownTag(tag, colorClass) {
+        return `
+            <div class="custom-select booru-tag-select inline-block align-middle" data-value="${tag.category}" data-tag="${this.escapeHtml(tag.name)}">
+                <div class="custom-select-trigger tag-text tag ${colorClass} cursor-pointer select-none" style="display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
+                    <span class="text-xs">${this.escapeHtml(tag.name)}</span>
+                    <span class="custom-select-value" style="display: none;"></span>
+                    <svg class="custom-select-arrow flex-shrink-0 transition-transform duration-200" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <div class="custom-select-dropdown bg border border-primary max-h-40 overflow-y-auto shadow-lg z-50 min-w-[100px]">
+                    <div class="custom-select-option px-3 py-2 cursor-pointer hover:surface text-xs" data-value="general">General</div>
+                    <div class="custom-select-option px-3 py-2 cursor-pointer hover:surface text-xs" data-value="artist">Artist</div>
+                    <div class="custom-select-option px-3 py-2 cursor-pointer hover:surface text-xs" data-value="character">Character</div>
+                    <div class="custom-select-option px-3 py-2 cursor-pointer hover:surface text-xs" data-value="copyright">Copyright</div>
+                    <div class="custom-select-option px-3 py-2 cursor-pointer hover:surface text-xs" data-value="meta">Meta</div>
+                </div>
+            </div>
+        `;
     }
 }
 

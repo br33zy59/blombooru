@@ -6,6 +6,7 @@ class BooruTag:
     """A tag from an external booru."""
     name: str
     category: str  # general, artist, character, copyright, meta
+    is_new: bool = True
 
 @dataclass
 class BooruPost:
