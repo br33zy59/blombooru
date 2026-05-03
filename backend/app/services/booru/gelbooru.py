@@ -2,6 +2,7 @@ import re
 import time
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
+import html
 
 import requests
 
@@ -114,7 +115,7 @@ class GelbooruClient(BooruClient):
         
         if tag_string:
             for tag_name in tag_string.split():
-                tag_name = tag_name.strip()
+                tag_name = html.unescape(tag_name.strip())
                 if tag_name:
                     tags.append(BooruTag(name=tag_name, category="general"))
         
@@ -160,7 +161,7 @@ class GelbooruClient(BooruClient):
 
         tags = self._parse_tags_from_post(data)
         rating = self._map_rating(data.get("rating"))
-        source = data.get("source", "") or ""
+        source = html.unescape(data.get("source", "") or "")
 
         file_url = data.get("file_url") or data.get("image")
         
@@ -234,7 +235,7 @@ class GelbooruClient(BooruClient):
                     id=data.get("id", 0),
                     tags=tags_list,
                     rating=self._map_rating(data.get("rating")),
-                    source=data.get("source", "") or "",
+                    source=html.unescape(data.get("source", "") or ""),
                     file_url=file_url,
                     preview_url=preview_url,
                     filename=self._get_filename(data),

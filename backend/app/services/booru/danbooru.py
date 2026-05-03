@@ -2,6 +2,7 @@ import re
 import time
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
+import html
 
 import requests
 
@@ -106,13 +107,13 @@ class DanbooruClient(BooruClient):
             tag_string = data.get(field_name, "")
             if tag_string:
                 for tag_name in tag_string.split():
-                    tag_name = tag_name.strip()
+                    tag_name = html.unescape(tag_name.strip())
                     if tag_name:
                         tags.append(BooruTag(name=tag_name, category=category))
 
         if not tags and data.get("tag_string"):
             for tag_name in data["tag_string"].split():
-                tag_name = tag_name.strip()
+                tag_name = html.unescape(tag_name.strip())
                 if tag_name:
                     tags.append(BooruTag(name=tag_name, category="general"))
 
@@ -144,7 +145,7 @@ class DanbooruClient(BooruClient):
 
         tags = self._parse_tags_from_post(data)
         rating = self._map_rating(data.get("rating"))
-        source = data.get("source", "") or ""
+        source = html.unescape(data.get("source", "") or "")
 
         file_url = data.get("file_url") or data.get("large_file_url")
         preview_url = data.get("preview_file_url") or data.get("large_file_url")
@@ -181,7 +182,7 @@ class DanbooruClient(BooruClient):
                     id=data.get("id", 0),
                     tags=tags_list,
                     rating=self._map_rating(data.get("rating")),
-                    source=data.get("source", "") or "",
+                    source=html.unescape(data.get("source", "") or ""),
                     file_url=data.get("file_url") or data.get("large_file_url"),
                     preview_url=data.get("preview_file_url") or data.get("large_file_url"),
                     filename=self._get_filename(data),
