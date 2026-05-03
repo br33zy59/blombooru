@@ -114,9 +114,30 @@ class TranslationHelper:
         return self._current_lang
 
     def get_translations(self, lang: str = None) -> Dict:
-        """Get all translations for a language"""
+        """Get all translations for a language, merging with fallback language for missing or empty keys"""
         target_lang = lang or self._current_lang
-        return self._translations.get(target_lang, self._translations.get(self._fallback_lang, {}))
+        target_dict = self._translations.get(target_lang, {})
+        
+        if target_lang == self._fallback_lang:
+            return target_dict
+            
+        fallback_dict = self._translations.get(self._fallback_lang, {})
+        
+        def merge_dicts(target, fallback):
+            if not isinstance(target, dict):
+                target = {}
+            if not isinstance(fallback, dict):
+                fallback = {}
+                
+            result = target.copy()
+            for k, v in fallback.items():
+                if k not in result or result[k] == "" or result[k] is None:
+                    result[k] = v
+                elif isinstance(v, dict) and isinstance(result[k], dict):
+                    result[k] = merge_dicts(result[k], v)
+            return result
+            
+        return merge_dicts(target_dict, fallback_dict)
 
     def _get_nested_value(self, data: Dict, key: str) -> Optional[str]:
         """Get a nested value using dot notation (e.g., 'nav.albums')"""
@@ -149,13 +170,13 @@ class TranslationHelper:
         translations = self._translations.get(target_lang, {})
         value = self._get_nested_value(translations, key)
         
-        # Fallback to English if not found
-        if value is None and target_lang != self._fallback_lang:
+        # Fallback to English if not found or empty
+        if (value is None or value == "") and target_lang != self._fallback_lang:
             fallback_translations = self._translations.get(self._fallback_lang, {})
             value = self._get_nested_value(fallback_translations, key)
         
         # If still not found, return the key itself
-        if value is None:
+        if value is None or value == "":
             return key
         
         # Handle interpolation

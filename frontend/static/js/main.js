@@ -65,7 +65,7 @@ class I18n {
             }
         }
 
-        if (typeof value !== 'string') {
+        if (typeof value !== 'string' || value === "") {
             return key;
         }
 
