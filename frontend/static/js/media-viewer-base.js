@@ -54,7 +54,7 @@ class MediaViewerBase {
                 <div class="info-row">
                     <span class="flex-shrink-0 mr-4">${window.i18n.t('media.info.source')}</span>
                     <strong class="truncate min-w-0 text-right flex-1">
-                        <a href="${media.source}" target="_blank" rel="noopener noreferrer" 
+                        <a href="${media.source}" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer"
                            class="text-primary hover:underline block truncate" title="${this.escapeHtml(media.source)}">
                             ${this.escapeHtml(media.source)}
                         </a>
