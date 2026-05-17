@@ -11,11 +11,12 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .auth_middleware import AuthMiddleware
 from .config import APP_VERSION, settings
 from .database import get_db, init_db, init_engine
-from .models import Media
+from .models import Media, Album
 from .routes import (admin, ai_tagger, albums, booru_config, booru_import,
                      danbooru, media, search, sharing, system, tag_implications,
                      tags)
@@ -109,6 +110,19 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     return response
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 404:
+        return templates.TemplateResponse("404.html", {
+            "request": request,
+            "app_name": settings.APP_NAME
+        }, status_code=404)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
 static_path = Path(__file__).parent.parent.parent / "frontend" / "static"
 templates_path = Path(__file__).parent.parent.parent / "frontend" / "templates"
 
@@ -222,7 +236,9 @@ async def login_page(request: Request):
 async def media_page(request: Request, media_id: int, db: Session = Depends(get_db)):
     """Media detail page"""
     media_item = db.query(Media).filter(Media.id == media_id).first()
-    
+    if media_item is None:
+        raise StarletteHTTPException(status_code=404, detail="Media not found")
+        
     return templates.TemplateResponse("media.html", {
         "request": request,
         "app_name": settings.APP_NAME,
@@ -290,8 +306,12 @@ async def albums_page(request: Request):
     })
 
 @app.get("/album/{album_id}", response_class=HTMLResponse)
-async def album_detail_page(request: Request, album_id: int):
+async def album_detail_page(request: Request, album_id: int, db: Session = Depends(get_db)):
     """Album detail page"""
+    album = db.query(Album).filter(Album.id == album_id).first()
+    if album is None:
+        raise StarletteHTTPException(status_code=404, detail="Album not found")
+
     return templates.TemplateResponse("album.html", {
         "request": request,
         "app_name": settings.APP_NAME,

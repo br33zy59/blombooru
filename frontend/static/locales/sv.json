@@ -484,6 +484,9 @@
         "forbidden": "Förbjudet",
         "not_found": "Hittades inte",
         "page_not_found": "Sidan du letar efter finns inte.",
+        "page_not_found_desc": "Sidan eller det media du letar efter kan ha tagits bort, bytt namn eller är tillfälligt otillgänglig.",
+        "try_searching": "Försök söka efter det du behöver:",
+        "return_home": "Återvänd hem",
         "server_error": "Serverfel",
         "unauthorized": "Obehörig",
         "error_403": "Åtkomst nekad (403). Du behöver troligtvis en API-nyckel eller ett login för detta."

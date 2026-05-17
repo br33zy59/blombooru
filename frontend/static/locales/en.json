@@ -484,6 +484,9 @@
         "forbidden": "Forbidden",
         "not_found": "Not Found",
         "page_not_found": "The page you're looking for doesn't exist.",
+        "page_not_found_desc": "The page or media you are looking for might have been removed, had its name changed, or is temporarily unavailable.",
+        "try_searching": "Try searching for what you need:",
+        "return_home": "Return Home",
         "server_error": "Server Error",
         "unauthorized": "Unauthorized",
         "error_403": "Access denied (403). You likely need an API key/login for this action."
