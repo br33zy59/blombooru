@@ -330,6 +330,14 @@ class MediaViewer extends MediaViewerBase {
         const currentMediaId = parseInt(this.mediaId);
         const minTags = Math.min(3, generalTags.length);
 
+        const relatedMediaEl = this.el('related-media');
+        const relatedMediaSection = this.el('related-media-section') || relatedMediaEl?.parentElement;
+        const relatedMediaLoading = this.el('related-media-loading');
+
+        if (relatedMediaSection) relatedMediaSection.style.display = 'block';
+        if (relatedMediaLoading) relatedMediaLoading.style.display = 'block';
+        if (relatedMediaEl) relatedMediaEl.style.display = 'none';
+
         const searchOnce = async (numTags) => {
             const shuffled = [...generalTags];
             for (let i = shuffled.length - 1; i > 0; i--) {
@@ -384,12 +392,18 @@ class MediaViewer extends MediaViewerBase {
 
     renderRelatedMedia(items) {
         const relatedMediaEl = this.el('related-media');
-        const relatedMediaSection = relatedMediaEl.parentElement;
+        const relatedMediaSection = this.el('related-media-section') || relatedMediaEl?.parentElement;
+        const relatedMediaLoading = this.el('related-media-loading');
         const params = new URLSearchParams(window.location.search);
         const queryString = params.toString();
-        relatedMediaSection.style.display = 'block';
-
-        relatedMediaEl.innerHTML = '';
+        
+        if (relatedMediaSection) relatedMediaSection.style.display = 'block';
+        if (relatedMediaLoading) relatedMediaLoading.style.display = 'none';
+        if (relatedMediaEl) {
+            relatedMediaEl.style.display = 'grid';
+            relatedMediaEl.classList.add('grid');
+            relatedMediaEl.innerHTML = '';
+        }
 
         items.forEach(media => {
             const item = this.createRelatedMediaItem(media, queryString);
@@ -451,11 +465,9 @@ class MediaViewer extends MediaViewerBase {
 
     hideRelatedMedia() {
         const relatedMediaEl = this.el('related-media');
-        if (relatedMediaEl) {
-            const relatedMediaSection = relatedMediaEl.parentElement;
-            if (relatedMediaSection) {
-                relatedMediaSection.style.display = 'none';
-            }
+        const relatedMediaSection = this.el('related-media-section') || relatedMediaEl?.parentElement;
+        if (relatedMediaSection) {
+            relatedMediaSection.style.display = 'none';
         }
     }
 

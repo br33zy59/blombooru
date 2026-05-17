@@ -150,9 +150,13 @@
             </div>
 
             <!-- Related Media -->
-            <div class="surface p-4 border">
+            <div id="related-media-section" class="surface p-4 border" style="display: none;">
                 <h2 class="text-base font-bold mb-3 pb-2 border-b">{{ t('media.related.title') }}</h2>
-                <div id="related-media" class="grid grid-cols-3 md:grid-cols-6 gap-2"></div>
+                <div id="related-media-loading" class="text-center py-8">
+                    <div class="spinner"></div>
+                    <p class="text-secondary mt-2">{{ t('common.loading') }}</p>
+                </div>
+                <div id="related-media" class="grid-cols-3 md:grid-cols-6 gap-2" style="display: none;"></div>
             </div>
         </div>
 
