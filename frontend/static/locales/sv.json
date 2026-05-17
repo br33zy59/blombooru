@@ -275,10 +275,10 @@
             "title": "Taggimplikationer",
             "target_tags": "Mål-taggar",
             "implies_tags": "Implicerade taggar",
-            "target_tags_placeholder": "t.ex. tagg1 tagg2",
-            "implies_tags_placeholder": "t.ex. implicerad_tagg1 implicerad_tagg2",
+            "target_tags_placeholder": "t.ex. tag1 *_tag2",
+            "implies_tags_placeholder": "t.ex. implied_tag1 implied_tag2",
             "configured_implications": "Konfigurerade implikationer",
-            "description": "Med taggimplikationer kan du definiera relationer mellan taggar. När en måltagg tillämpas på ett medieobjekt läggs även de implicerade taggarna till automatiskt. Om det finns fler än en måltagg läggs de implicerade taggarna endast till om alla måltaggar finns i medieobjektet."
+            "description": "Med taggimplikationer kan du definiera relationer mellan taggar. När en måltagg tillämpas på ett medieobjekt läggs även de implicerade taggarna till automatiskt. Om det finns fler än en måltagg (eller ett mönster), kommer de implicerade taggarna endast att läggas till om alla måltaggar matchas. Jokertecken (* och ?) stöds i måltaggar."
         },
         "update": {
             "backup_warning": "Uppdatering kan orsaka dataförlust om det inte görs försiktigt. Gör alltid en säkerhetskopia före uppdatering.",
