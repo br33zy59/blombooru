@@ -31,12 +31,27 @@ class MediaViewer extends MediaViewerBase {
         this.init();
     }
 
-    init() {
+    async init() {
+        await this.loadWDTaggerSettings();
         this.initFullscreenViewer();
         this.initTooltipHelper();
         this.loadMedia();
         this.setupAIMetadataToggle();
         this.setupEventListeners();
+    }
+
+    async loadWDTaggerSettings() {
+        try {
+            const res = await fetch('/api/ai-tagger/settings');
+            if (res.ok) {
+                const data = await res.json();
+                this.wdTaggerSettings.generalThreshold = data.general_threshold ?? this.wdTaggerSettings.generalThreshold;
+                this.wdTaggerSettings.characterThreshold = data.character_threshold ?? this.wdTaggerSettings.characterThreshold;
+                this.wdTaggerSettings.modelName = data.model_name ?? this.wdTaggerSettings.modelName;
+            }
+        } catch (e) {
+            // Non-fatal, fall back to defaults
+        }
     }
 
     initTooltipHelper() {
@@ -396,7 +411,7 @@ class MediaViewer extends MediaViewerBase {
         const relatedMediaLoading = this.el('related-media-loading');
         const params = new URLSearchParams(window.location.search);
         const queryString = params.toString();
-        
+
         if (relatedMediaSection) relatedMediaSection.style.display = 'block';
         if (relatedMediaLoading) relatedMediaLoading.style.display = 'none';
         if (relatedMediaEl) {
