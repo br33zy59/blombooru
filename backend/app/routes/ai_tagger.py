@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -47,6 +48,29 @@ def find_media_file(filename: str) -> Optional[Path]:
             return path
     
     return None
+
+def compile_blacklist(blacklisted_tags: List[str]) -> List[re.Pattern]:
+    compiled = []
+    special_chars = ['.', '^', '$', '+', '(', ')', '[', ']', '{', '}', '|', '\\']
+    for pattern in blacklisted_tags:
+        escaped_pattern = pattern
+        for char in special_chars:
+            escaped_pattern = escaped_pattern.replace(char, '\\' + char)
+        escaped_pattern = escaped_pattern.replace('*', '.*')
+        escaped_pattern = escaped_pattern.replace('?', '.?')
+        regex_str = '^' + escaped_pattern + '$'
+        compiled.append(re.compile(regex_str, re.IGNORECASE))
+    return compiled
+
+def filter_tags(tags: List[dict], blacklisted_tags: List[str]) -> List[dict]:
+    if not blacklisted_tags:
+        return tags
+    compiled_patterns = compile_blacklist(blacklisted_tags)
+    filtered = []
+    for tag in tags:
+        if not any(pattern.match(tag["name"]) for pattern in compiled_patterns):
+            filtered.append(tag)
+    return filtered
 
 class PredictTagsRequest(BaseModel):
     general_threshold: float = 0.35
@@ -108,6 +132,7 @@ class WDTaggerSettingsRequest(BaseModel):
     general_threshold: Optional[float] = None
     character_threshold: Optional[float] = None
     model_name: Optional[str] = None
+    blacklisted_tags: Optional[List[str]] = None
 
 @router.get("/settings")
 async def get_tagger_settings(current_user: User = Depends(require_admin_mode)):
@@ -141,6 +166,9 @@ async def save_tagger_settings(
                        f"Valid models: {list(WDTagger.AVAILABLE_MODELS.keys())}"
             )
         current["model_name"] = request.model_name
+
+    if request.blacklisted_tags is not None:
+        current["blacklisted_tags"] = request.blacklisted_tags
 
     settings.save_settings({"wd_tagger": current})
     return {"success": True, **current}
@@ -274,9 +302,12 @@ async def predict_tags(
         
         predictions = await loop.run_in_executor(_inference_executor, do_predict)
         
+        blacklisted_tags = settings.WD_TAGGER_SETTINGS.get("blacklisted_tags", [])
+        filtered_predictions = filter_tags(predictions, blacklisted_tags)
+        
         return PredictTagsResponse(
             media_id=media_id,
-            tags=[PredictedTag(**tag) for tag in predictions],
+            tags=[PredictedTag(**tag) for tag in filtered_predictions],
             model_used=request.model_name
         )
     
@@ -370,13 +401,15 @@ async def predict_tags_batch(
         # Build results
         results = []
         path_to_media_id = {fp: mid for mid, fp in file_info}
+        blacklisted_tags = settings.WD_TAGGER_SETTINGS.get("blacklisted_tags", [])
         
         for file_path, tags in predictions:
             media_id = path_to_media_id.get(file_path)
             if media_id is not None:
+                filtered_tags = filter_tags(tags, blacklisted_tags)
                 results.append(PredictTagsResponse(
                     media_id=media_id,
-                    tags=[PredictedTag(**tag) for tag in tags],
+                    tags=[PredictedTag(**tag) for tag in filtered_tags],
                     model_used=request.model_name
                 ))
         
@@ -477,10 +510,13 @@ async def predict_tags_stream(
                 media_id = path_to_id.get(file_path)
                 processed += 1
                 
+                blacklisted_tags = settings.WD_TAGGER_SETTINGS.get("blacklisted_tags", [])
+                filtered_tags = filter_tags(tags, blacklisted_tags)
+                
                 event = {
                     "type": "result",
                     "media_id": media_id,
-                    "tags": tags,
+                    "tags": filtered_tags,
                     "progress": processed,
                     "total": total
                 }
