@@ -280,6 +280,16 @@
             "configured_implications": "Konfigurerade implikationer",
             "description": "Med taggimplikationer kan du definiera relationer mellan taggar. När en måltagg tillämpas på ett medieobjekt läggs även de implicerade taggarna till automatiskt. Om det finns fler än en måltagg (eller ett mönster), kommer de implicerade taggarna endast att läggas till om alla måltaggar matchas. Jokertecken (* och ?) stöds i måltaggar."
         },
+        "ai_tagger": {
+            "title": "AI-taggförutsägare",
+            "description": "Konfigurera inställningar för WD Tagger. Dessa används för AI-taggförutsägelseverktygen. Standardinställningarna bör i de flesta fall vara tillräckliga. För att taggförutsägelse ska fungera måste du importera en taggdump från Danbooru. Klicka <a class='text-primary transition-colors hover:text-primary' href='https://github.com/mrblomblo/blombooru/blob/main/README_SV.md#1-csv-import' target='_blank' rel='noopener noreferrer' referrerPolicy='no-referrer'>här</a> för att se hur man gör.",
+            "general_threshold": "Konfidenströskel (allmänt)",
+            "character_threshold": "Konfidenströskel (karaktärer)",
+            "model": "Modell",
+            "save_settings": "Spara inställningar",
+            "settings_saved": "AI Tagger-inställningar sparade",
+            "threshold_hint": "Konfidenspoäng (0.0 till 1.0). Taggar med konfidenspoäng under tröskeln exkluderas från prediktioner."
+        },
         "update": {
             "backup_warning": "Uppdatering kan orsaka dataförlust om det inte görs försiktigt. Gör alltid en säkerhetskopia före uppdatering.",
             "check_updates": "Sök efter uppdateringar",
