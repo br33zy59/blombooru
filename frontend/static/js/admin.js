@@ -99,6 +99,15 @@ class AdminPanel {
                 new TagAutocomplete(el, { multipleValues: true });
             }
         });
+
+        // AI Tagger Blacklisted tags input
+        const blacklistedTagsEl = document.getElementById('wd-blacklisted-tags');
+        if (blacklistedTagsEl) {
+            this.tagInputHelper.setupTagInput(blacklistedTagsEl, 'wd-blacklisted-tags', { onValidate: () => { }, allowWildcards: true });
+            if (typeof TagAutocomplete !== 'undefined') {
+                new TagAutocomplete(blacklistedTagsEl, { multipleValues: true });
+            }
+        }
     }
 
     cleanupCustomButtons() {
@@ -998,6 +1007,12 @@ class AdminPanel {
             
             const charEl = document.getElementById('wd-character-threshold');
             if (charEl && data.character_threshold != null) charEl.value = data.character_threshold;
+
+            const blacklistEl = document.getElementById('wd-blacklisted-tags');
+            if (blacklistEl && data.blacklisted_tags) {
+                blacklistEl.textContent = data.blacklisted_tags.join(' ');
+                setTimeout(() => this.tagInputHelper.validateAndStyleTags(blacklistEl), 100);
+            }
             
             // Populate model dropdown
             const dropdown = document.getElementById('wd-model-dropdown');
@@ -1032,11 +1047,19 @@ class AdminPanel {
         const generalEl = document.getElementById('wd-general-threshold');
         const charEl = document.getElementById('wd-character-threshold');
         const modelName = this.wdModelSelect ? this.wdModelSelect.getValue() : null;
+        
+        let blacklistedTags = [];
+        const blacklistEl = document.getElementById('wd-blacklisted-tags');
+        if (blacklistEl) {
+            const text = this.tagInputHelper.getPlainTextFromDiv(blacklistEl);
+            blacklistedTags = text.split(/\s+/).filter(t => t.length > 0);
+        }
 
         const body = {};
         if (generalEl && generalEl.value) body.general_threshold = parseFloat(generalEl.value);
         if (charEl && charEl.value) body.character_threshold = parseFloat(charEl.value);
         if (modelName) body.model_name = modelName;
+        body.blacklisted_tags = blacklistedTags;
 
         try {
             const res = await fetch('/api/ai-tagger/settings', {
