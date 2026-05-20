@@ -16,18 +16,6 @@ class MediaViewer extends MediaViewerBase {
             modelName: 'wd-eva02-large-tagger-v3'
         };
 
-        // Relation Manager state
-        this.relationModal = {
-            isOpen: false,
-            selectedItems: new Set(),
-            currentPage: 1,
-            totalPages: 1,
-            isSearchMode: false,
-            searchQuery: '',
-            isLoading: false,
-            childIds: new Set() // Track current children for removal
-        };
-
         this.init();
     }
 
@@ -1142,7 +1130,16 @@ class MediaViewer extends MediaViewerBase {
 
     setupRelationManager() {
         this.renderRelationStatusDisplay();
-        this.setupRelationModalEvents();
+
+        // Track current children IDs for badge/removal functionality
+        this.relationChildIds = new Set();
+        if (this.currentMedia.hierarchy) {
+            this.currentMedia.hierarchy.forEach(item => {
+                if (!this.currentMedia.parent_id) {
+                    this.relationChildIds.add(item.id);
+                }
+            });
+        }
 
         this.el('manage-relations-btn')?.addEventListener('click', () => {
             this.openRelationModal();
@@ -1172,106 +1169,15 @@ class MediaViewer extends MediaViewerBase {
         }
     }
 
-    setupRelationModalEvents() {
-        const modal = this.el('relation-manager-modal');
-        const backdrop = this.el('relation-modal-backdrop');
-        const closeBtn = this.el('relation-modal-close');
-        const searchForm = this.el('relation-search-form');
-        const searchInput = this.el('relation-search-input');
-
-        // Close modal events
-        backdrop?.addEventListener('click', () => this.closeRelationModal());
-        closeBtn?.addEventListener('click', () => this.closeRelationModal());
-
-        // Search form
-        searchForm?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.performRelationSearch();
-        });
-
-        // Search input with debounce
-        let searchTimeout;
-        searchInput?.addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                this.performRelationSearch();
-            }, 300);
-        });
-
-        // Initialize tag autocomplete for search input
-        if (searchInput && typeof TagAutocomplete !== 'undefined') {
-            new TagAutocomplete(searchInput, {
-                multipleValues: true
-            });
-        }
-
-        // Buttons
-        this.el('relation-set-parent-btn')?.addEventListener('click', () => this.setSelectedAsParent());
-        this.el('relation-add-child-btn')?.addEventListener('click', () => this.addSelectedAsChildren());
-        this.el('relation-add-children-btn')?.addEventListener('click', () => this.addSelectedAsChildren());
-        this.el('relation-remove-children-btn')?.addEventListener('click', () => this.removeSelectedChildren());
-        this.el('relation-clear-selection')?.addEventListener('click', () => this.clearRelationSelection());
-        this.el('relation-load-more-btn')?.addEventListener('click', () => this.loadMoreRelationItems());
-    }
-
-    openRelationModal() {
-        const modal = this.el('relation-manager-modal');
-        if (!modal) return;
-
-        // Reset state
-        this.relationModal.isOpen = true;
-        this.relationModal.selectedItems.clear();
-        this.relationModal.currentPage = 1;
-        this.relationModal.isSearchMode = false;
-        this.relationModal.searchQuery = '';
-        this.relationModal.childIds.clear();
-
-        // Store current children IDs for removal functionality
-        if (this.currentMedia.hierarchy) {
-            this.currentMedia.hierarchy.forEach(item => {
-                if (!this.currentMedia.parent_id) {
-                    // Current media is parent, hierarchy items are children
-                    this.relationModal.childIds.add(item.id);
-                }
-            });
-        }
-
-        // Clear search input
-        const searchInput = this.el('relation-search-input');
-        if (searchInput) searchInput.value = '';
-
-        // Update status
-        this.updateRelationModalStatus();
-
-        // Show modal
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-
-        // Load initial content (related items)
-        this.loadRelationGallery();
-    }
-
-    closeRelationModal() {
-        const modal = this.el('relation-manager-modal');
-        if (!modal) return;
-
-        this.relationModal.isOpen = false;
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-    }
-
-    updateRelationModalStatus() {
-        const container = this.el('relation-status-content');
-        if (!container) return;
-
+    _buildRelationStatusHtml() {
         const hasParent = !!this.currentMedia.parent_id;
         const hasChildren = this.currentMedia.has_children;
-        const childCount = this.relationModal.childIds.size;
+        const childCount = this.relationChildIds.size;
 
-        let html = '';
+        const infoIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
 
         if (hasParent) {
-            html = `
+            return `
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <span class="font-medium">${window.i18n.t('media.relations.current_parent_label')}</span>
@@ -1283,135 +1189,157 @@ class MediaViewer extends MediaViewerBase {
                         ${window.i18n.t('media.relations.remove_parent_button')}
                     </button>
                 </div>
-                <p class="text-xs text-secondary mt-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                    ${window.i18n.t('media.relations.info_has_parent')}
-                </p>
+                <p class="text-xs text-secondary mt-2">${infoIcon}${window.i18n.t('media.relations.info_has_parent')}</p>
             `;
         } else if (hasChildren) {
-            html = `
+            return `
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <span><span class="font-medium">${window.i18n.t('media.relations.children_label')}</span> ${childCount === 1 ? window.i18n.t('media.relations.children_items', { count: childCount }) : window.i18n.t('common.items_count', { count: childCount })}</span>
                 </div>
-                <p class="text-xs text-secondary mt-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                    ${window.i18n.t('media.relations.info_has_children')}
-                </p>
+                <p class="text-xs text-secondary mt-2">${infoIcon}${window.i18n.t('media.relations.info_has_children')}</p>
             `;
         } else {
-            html = `
-                <p class="text-secondary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                    ${window.i18n.t('media.relations.info_no_relations')}
-                </p>
-            `;
+            return `<p class="text-secondary">${infoIcon}${window.i18n.t('media.relations.info_no_relations')}</p>`;
         }
-
-        container.innerHTML = html;
-
-        // Add remove parent event listener
-        this.el('relation-remove-parent-btn')?.addEventListener('click', () => this.removeParent());
     }
 
-    async loadRelationGallery(append = false) {
-        if (this.relationModal.isLoading) return;
+    openRelationModal() {
+        const currentId = parseInt(this.mediaId);
+        const isCurrentItemParent = this.currentMedia.has_children ||
+            (this.currentMedia.hierarchy &&
+                this.currentMedia.hierarchy.length > 0 &&
+                !this.currentMedia.parent_id);
 
-        this.relationModal.isLoading = true;
-        const gallery = this.el('relation-gallery');
-        const loading = this.el('relation-loading');
-        const empty = this.el('relation-empty');
-        const loadMore = this.el('relation-load-more');
-        const searchHint = this.el('relation-search-hint');
+        // Build extra action buttons for relation management
+        const extraButtons = [
+            { id: 'relation-set-parent-btn', text: window.i18n.t('media.relations.set_parent'), className: 'btn-primary', onClick: () => this.setSelectedAsParent() },
+            { id: 'relation-add-child-btn', text: window.i18n.t('media.relations.add_child'), className: 'btn-primary', onClick: () => this.addSelectedAsChildren() },
+            { id: 'relation-add-children-btn', text: window.i18n.t('media.relations.add_children'), className: 'btn-primary', onClick: () => this.addSelectedAsChildren() },
+            { id: 'relation-remove-children-btn', text: window.i18n.t('media.relations.remove_selected'), className: 'btn-danger', onClick: () => this.removeSelectedChildren() },
+        ];
 
-        if (!append) {
-            gallery.innerHTML = '';
+        // Destroy any previous picker instance
+        if (this._relationPicker) {
+            this._relationPicker.destroy();
         }
-        loading.style.display = 'block';
-        empty.style.display = 'none';
-        loadMore.style.display = 'none';
 
-        try {
-            let items = [];
-            let totalPages = 1;
-
-            if (this.relationModal.isSearchMode && this.relationModal.searchQuery) {
-                const params = new URLSearchParams({
-                    q: this.relationModal.searchQuery,
-                    page: this.relationModal.currentPage,
-                    limit: 24
-                });
-
-                const res = await fetch(`/api/search?${params.toString()}`, {
-                    credentials: 'include'
-                });
-                const data = await res.json();
-                items = data.items || [];
-                totalPages = data.pages || 1;
-
-                searchHint.textContent = window.i18n.t('media.relations.search_results', { query: this.relationModal.searchQuery });
-            } else {
-                items = await this.getRelatedItemsForModal();
-                searchHint.textContent = window.i18n.t('media.relations.search_hint');
-            }
-
-            // Filtering logic
-            const currentId = parseInt(this.mediaId);
-
-            const isCurrentItemParent = this.currentMedia.has_children ||
-                (this.currentMedia.hierarchy &&
-                    this.currentMedia.hierarchy.length > 0 &&
-                    !this.currentMedia.parent_id);
-
-            items = items.filter(item => {
-                if (item.id === currentId) return false;
-                if (item.parent_id && item.parent_id !== currentId) {
-                    return false;
-                }
-                if (isCurrentItemParent && item.has_children) {
-                    return false;
-                }
-
+        this._relationPicker = new MediaPickerModal({
+            title: window.i18n.t('media.relations.title'),
+            mode: 'multi',
+            excludeIds: [currentId],
+            statusHtml: this._buildRelationStatusHtml(),
+            extraButtons: extraButtons,
+            confirmText: window.i18n.t('common.confirm'),
+            cancelText: window.i18n.t('common.cancel'),
+            filterFn: (item) => {
+                // Items already parented to someone else are not eligible
+                if (item.parent_id && item.parent_id !== currentId) return false;
+                // If current is a parent, other parents cannot become children
+                if (isCurrentItemParent && item.has_children) return false;
                 return true;
-            });
+            },
+            getInitialItems: async () => {
+                return await this._getRelatedItemsForModal();
+            },
+            badgeFn: (media) => {
+                const isParent = media.id === this.currentMedia.parent_id;
+                const isChild = this.relationChildIds.has(media.id);
+                if (isParent) return { text: window.i18n.t('media.relations.parent_badge'), className: 'bg-[var(--parent-outline)] tag-text' };
+                if (isChild) return { text: window.i18n.t('media.relations.child_badge'), className: 'bg-[var(--child-outline)] tag-text' };
+                return null;
+            },
+            onCancel: () => {},
+        });
 
-            this.relationModal.totalPages = totalPages;
+        // Override the footer update to add relation-specific button logic
+        const originalUpdateFooter = this._relationPicker._updateFooter.bind(this._relationPicker);
+        this._relationPicker._updateFooter = () => {
+            originalUpdateFooter();
+            this._updateRelationActionButtons();
+        };
 
-            if (items.length === 0 && !append) {
-                empty.style.display = 'block';
-            } else {
-                items.forEach(media => {
-                    const item = this.createRelationGalleryItem(media);
-                    gallery.appendChild(item);
-                });
+        this._relationPicker.open();
 
-                // Show load more if there are more pages (only in search mode)
-                if (this.relationModal.isSearchMode && this.relationModal.currentPage < totalPages) {
-                    loadMore.style.display = 'block';
-                }
-            }
-        } catch (e) {
-            console.error('Error loading relation gallery:', e);
-            empty.style.display = 'block';
-            empty.innerHTML = `<p class="text-danger">${window.i18n.t('media.errors.loading_items')}</p>`;
-        } finally {
-            loading.style.display = 'none';
-            this.relationModal.isLoading = false;
+        // Attach remove-parent listener in the status bar
+        const removeParentBtn = this._relationPicker.root?.querySelector('#relation-remove-parent-btn');
+        if (removeParentBtn) {
+            removeParentBtn.addEventListener('click', () => this.removeParent());
         }
     }
 
-    async getRelatedItemsForModal() {
+    closeRelationModal() {
+        if (this._relationPicker) {
+            this._relationPicker.close();
+        }
+    }
+
+    _updateRelationActionButtons() {
+        const picker = this._relationPicker;
+        if (!picker || !picker.root) return;
+
+        const selectedCount = picker.selectedItems.size;
+        const hasParent = !!this.currentMedia.parent_id;
+        const hasChildren = this.currentMedia.has_children;
+
+        const setParentBtn = picker.getButton('relation-set-parent-btn');
+        const addChildBtn = picker.getButton('relation-add-child-btn');
+        const addChildrenBtn = picker.getButton('relation-add-children-btn');
+        const removeChildrenBtn = picker.getButton('relation-remove-children-btn');
+
+        // Hide all first
+        if (setParentBtn) setParentBtn.style.display = 'none';
+        if (addChildBtn) addChildBtn.style.display = 'none';
+        if (addChildrenBtn) addChildrenBtn.style.display = 'none';
+        if (removeChildrenBtn) removeChildrenBtn.style.display = 'none';
+
+        // Also hide the generic confirm button (relation manager uses its own buttons)
+        const confirmBtn = picker.root.querySelector('.mpicker-confirm-btn');
+        if (confirmBtn) confirmBtn.style.display = 'none';
+
+        if (selectedCount === 0) return;
+
+        const selectedIds = [...picker.selectedItems.keys()];
+        const selectedChildIds = selectedIds.filter(id => this.relationChildIds.has(id));
+        const nonChildSelected = selectedIds.filter(id => !this.relationChildIds.has(id));
+
+        if (hasParent) {
+            if (selectedCount === 1) {
+                const selectedId = selectedIds[0];
+                if (selectedId !== this.currentMedia.parent_id) {
+                    if (setParentBtn) setParentBtn.style.display = 'block';
+                }
+            }
+        } else if (hasChildren) {
+            if (selectedChildIds.length > 0) {
+                if (removeChildrenBtn) {
+                    removeChildrenBtn.style.display = 'block';
+                    removeChildrenBtn.textContent = window.i18n.t('media.relations.remove_children', { count: selectedChildIds.length });
+                }
+            }
+            if (nonChildSelected.length > 0) {
+                if (nonChildSelected.length === 1) {
+                    if (addChildBtn) addChildBtn.style.display = 'block';
+                } else {
+                    if (addChildrenBtn) {
+                        addChildrenBtn.style.display = 'block';
+                        addChildrenBtn.textContent = window.i18n.t('media.relations.add_children_count', { count: nonChildSelected.length });
+                    }
+                }
+            }
+        } else {
+            if (selectedCount === 1) {
+                if (setParentBtn) setParentBtn.style.display = 'block';
+                if (addChildBtn) addChildBtn.style.display = 'block';
+            } else {
+                if (addChildrenBtn) {
+                    addChildrenBtn.style.display = 'block';
+                    addChildrenBtn.textContent = window.i18n.t('media.relations.add_children_count', { count: selectedCount });
+                }
+            }
+        }
+    }
+
+    async _getRelatedItemsForModal() {
         const items = [];
         const addedIds = new Set();
         const currentId = parseInt(this.mediaId);
@@ -1465,201 +1393,11 @@ class MediaViewer extends MediaViewerBase {
         return items;
     }
 
-    createRelationGalleryItem(media) {
-        const item = document.createElement('div');
-        item.className = 'gallery-item relative cursor-pointer border border-2 group';
-        item.dataset.id = media.id;
-
-        const isSelected = this.relationModal.selectedItems.has(media.id);
-        const isChild = this.relationModal.childIds.has(media.id);
-        const isParent = media.id === this.currentMedia.parent_id;
-
-        if (isSelected) item.classList.add('selected');
-        if (isChild) item.classList.add('is-child');
-        if (isParent) item.classList.add('is-parent');
-
-        // Thumbnail
-        const img = document.createElement('img');
-        img.src = `/api/media/${media.id}/thumbnail`;
-        img.alt = media.filename || window.i18n.t('media.relations.fallback_alt', { id: media.id });
-        img.loading = 'lazy';
-        img.className = 'w-full aspect-square object-cover transition-all';
-        img.draggable = false;
-        img.onerror = () => {
-            img.src = '/static/images/no-thumbnail.png';
-        };
-
-        // Selection overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'absolute inset-0 bg-primary/30 opacity-0 transition-opacity pointer-events-none';
-        if (isSelected) overlay.classList.add('opacity-100');
-
-        // Select Indicator
-        const indicator = document.createElement('div');
-        indicator.className = 'select-indicator';
-        indicator.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-        `;
-
-        // Status badge (parent/child)
-        if (isParent || isChild) {
-            const badge = document.createElement('div');
-            badge.className = `absolute top-1 right-1 px-1.5 py-0.5 text-xs font-medium ${isParent ? 'bg-[var(--parent-outline)] tag-text' : 'bg-[var(--child-outline)] tag-text'}`;
-            badge.textContent = isParent ? window.i18n.t('media.relations.parent_badge') : window.i18n.t('media.relations.child_badge');
-            item.appendChild(badge);
-        }
-
-        // Click handler
-        item.addEventListener('click', () => {
-            this.toggleRelationItemSelection(media.id, item);
-        });
-
-        item.appendChild(img);
-        item.appendChild(overlay);
-        item.appendChild(indicator);
-
-        return item;
-    }
-
-    toggleRelationItemSelection(mediaId, itemElement) {
-        const overlay = itemElement.querySelector('.absolute.bg-primary\\/30');
-
-        if (this.relationModal.selectedItems.has(mediaId)) {
-            this.relationModal.selectedItems.delete(mediaId);
-            itemElement.classList.remove('selected');
-            itemElement.classList.remove('border-primary');
-            if (overlay) overlay.classList.remove('opacity-100');
-        } else {
-            this.relationModal.selectedItems.add(mediaId);
-            itemElement.classList.add('selected');
-            itemElement.classList.add('border-primary');
-            if (overlay) overlay.classList.add('opacity-100');
-        }
-
-        this.updateRelationActionButtons();
-    }
-
-    updateRelationActionButtons() {
-        const selectedCount = this.relationModal.selectedItems.size;
-        const hasParent = !!this.currentMedia.parent_id;
-        const hasChildren = this.currentMedia.has_children;
-
-        const countEl = this.el('relation-selected-count');
-        const clearBtn = this.el('relation-clear-selection');
-        const setParentBtn = this.el('relation-set-parent-btn');
-        const addChildBtn = this.el('relation-add-child-btn');
-        const addChildrenBtn = this.el('relation-add-children-btn');
-        const removeChildrenBtn = this.el('relation-remove-children-btn');
-        const actionsContainer = this.el('relation-actions');
-
-        // Update count
-        if (countEl) {
-            countEl.textContent = window.i18n.t('media.relations.selected', { count: selectedCount });
-        }
-
-        // Show/hide clear button
-        if (clearBtn) {
-            clearBtn.style.display = selectedCount > 0 ? 'inline' : 'none';
-        }
-
-        // Hide all action buttons first
-        if (setParentBtn) setParentBtn.style.display = 'none';
-        if (addChildBtn) addChildBtn.style.display = 'none';
-        if (addChildrenBtn) addChildrenBtn.style.display = 'none';
-        if (removeChildrenBtn) removeChildrenBtn.style.display = 'none';
-
-        if (selectedCount === 0) {
-            return;
-        }
-
-        // Check if any selected items are current children (for removal)
-        const selectedChildIds = [...this.relationModal.selectedItems].filter(id =>
-            this.relationModal.childIds.has(id)
-        );
-        const hasSelectedChildren = selectedChildIds.length > 0;
-
-        // Determine which buttons to show based on current state and selection
-        if (hasParent) {
-            // Current media has a parent - can only change parent
-            if (selectedCount === 1) {
-                const selectedId = [...this.relationModal.selectedItems][0];
-                if (selectedId !== this.currentMedia.parent_id) {
-                    if (setParentBtn) setParentBtn.style.display = 'block';
-                }
-            }
-        } else if (hasChildren) {
-            // Current media has children - can add more or remove existing
-            if (hasSelectedChildren) {
-                if (removeChildrenBtn) {
-                    removeChildrenBtn.style.display = 'block';
-                    removeChildrenBtn.textContent = window.i18n.t('media.relations.remove_children', { count: selectedChildIds.length });
-                }
-            }
-            // Check for non-child items to add
-            const nonChildSelected = [...this.relationModal.selectedItems].filter(id =>
-                !this.relationModal.childIds.has(id)
-            );
-            if (nonChildSelected.length > 0) {
-                if (nonChildSelected.length === 1) {
-                    if (addChildBtn) addChildBtn.style.display = 'block';
-                } else {
-                    if (addChildrenBtn) {
-                        addChildrenBtn.style.display = 'block';
-                        addChildrenBtn.textContent = window.i18n.t('media.relations.add_children_count', { count: nonChildSelected.length });
-                    }
-                }
-            }
-        } else {
-            // No relations - can set parent (1 item) or add children (any number)
-            if (selectedCount === 1) {
-                if (setParentBtn) setParentBtn.style.display = 'block';
-                if (addChildBtn) addChildBtn.style.display = 'block';
-            } else {
-                if (addChildrenBtn) {
-                    addChildrenBtn.style.display = 'block';
-                    addChildrenBtn.textContent = window.i18n.t('media.relations.add_children_count', { count: selectedCount });
-                }
-            }
-        }
-    }
-
-    clearRelationSelection() {
-        this.relationModal.selectedItems.clear();
-
-        const gallery = this.el('relation-gallery');
-        gallery.querySelectorAll('.gallery-item').forEach(item => {
-            item.classList.remove('selected');
-            item.classList.remove('border-primary');
-
-            const overlay = item.querySelector('.absolute.bg-primary\\/30');
-            if (overlay) overlay.classList.remove('opacity-100');
-        });
-
-        this.updateRelationActionButtons();
-    }
-
-    performRelationSearch() {
-        const searchInput = this.el('relation-search-input');
-        const query = searchInput?.value.trim() || '';
-
-        this.relationModal.searchQuery = query;
-        this.relationModal.isSearchMode = query.length > 0;
-        this.relationModal.currentPage = 1;
-
-        this.loadRelationGallery();
-    }
-
-    loadMoreRelationItems() {
-        this.relationModal.currentPage++;
-        this.loadRelationGallery(true);
-    }
-
     async setSelectedAsParent() {
-        if (this.relationModal.selectedItems.size !== 1) return;
+        const picker = this._relationPicker;
+        if (!picker || picker.selectedItems.size !== 1) return;
 
-        const parentId = [...this.relationModal.selectedItems][0];
+        const parentId = [...picker.selectedItems.keys()][0];
 
         try {
             await app.apiCall(`/api/media/${this.mediaId}`, {
@@ -1676,14 +1414,16 @@ class MediaViewer extends MediaViewerBase {
     }
 
     async addSelectedAsChildren() {
-        const selectedIds = [...this.relationModal.selectedItems].filter(id =>
-            !this.relationModal.childIds.has(id)
+        const picker = this._relationPicker;
+        if (!picker) return;
+
+        const selectedIds = [...picker.selectedItems.keys()].filter(id =>
+            !this.relationChildIds.has(id)
         );
 
         if (selectedIds.length === 0) return;
 
         try {
-            // Set current media as parent for each selected item
             for (const childId of selectedIds) {
                 await app.apiCall(`/api/media/${childId}`, {
                     method: 'PATCH',
@@ -1700,8 +1440,11 @@ class MediaViewer extends MediaViewerBase {
     }
 
     async removeSelectedChildren() {
-        const selectedChildIds = [...this.relationModal.selectedItems].filter(id =>
-            this.relationModal.childIds.has(id)
+        const picker = this._relationPicker;
+        if (!picker) return;
+
+        const selectedChildIds = [...picker.selectedItems.keys()].filter(id =>
+            this.relationChildIds.has(id)
         );
 
         if (selectedChildIds.length === 0) return;
