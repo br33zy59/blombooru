@@ -138,6 +138,8 @@ templates.env.globals['get_translations_json'] = lambda: json.dumps(
 )
 templates.env.globals['current_language'] = lambda: settings.CURRENT_LANGUAGE
 templates.env.globals['available_languages'] = lambda: [lang.to_dict() for lang in language_registry.get_all_languages()]
+templates.env.globals['custom_background'] = lambda: settings.CUSTOM_BACKGROUND
+templates.env.globals['require_auth'] = lambda: settings.REQUIRE_AUTH
 
 def _is_authenticated_admin(request) -> bool:
     """Verify that the request has a valid admin_token JWT. Used by templates to show/hide
@@ -229,7 +231,8 @@ async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {
         "request": request,
         "app_name": settings.APP_NAME,
-        "return_url": return_url
+        "return_url": return_url,
+        "is_login_page": True
     })
 
 @app.get("/media/{media_id}", response_class=HTMLResponse)
@@ -259,7 +262,8 @@ async def shared_page(request: Request, share_uuid: str, db: Session = Depends(g
     context = {
         "request": request,
         "app_name": settings.APP_NAME,
-        "share_uuid": share_uuid
+        "share_uuid": share_uuid,
+        "is_shared_page": True
     }
     
     if media:
