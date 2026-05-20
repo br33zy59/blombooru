@@ -396,6 +396,225 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Custom Background -->
+                <div>
+                    <label class="block text-xs font-bold mb-2">
+                        {{ t('admin.settings.custom_background.title') }}
+                    </label>
+                    <div class="bg p-4 border">
+                        <div>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="custom-bg-enabled" class="accent-primary w-4 h-4">
+                                <span class="text-xs font-bold">
+                                    {{ t('admin.settings.custom_background.enable') }}
+                                </span>
+                            </label>
+                            <p class="text-xs text-secondary opacity-70 ml-6">
+                                {{ t('admin.settings.custom_background.description') }}
+                            </p>
+                        </div>
+
+                        <div id="custom-bg-options" class="space-y-4 mt-4" style="display: none;">
+                            <!-- Media preview and selection -->
+                            <div class="flex items-center gap-4">
+                                <div id="custom-bg-preview"
+                                    class="w-16 h-16 border bg flex items-center justify-center overflow-hidden flex-shrink-0">
+                                    <span id="custom-bg-preview-text" class="text-xs text-secondary text-center px-1">
+                                        {{ t('admin.settings.custom_background.no_media_selected') }}
+                                    </span>
+                                    <img id="custom-bg-preview-img" class="w-full h-full object-cover"
+                                        style="display: none;" alt="">
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" id="custom-bg-select-btn"
+                                        class="btn-primary px-3 py-1.5 text-xs">
+                                        {{ t('admin.settings.custom_background.select_media') }}
+                                    </button>
+                                    <button type="button" id="custom-bg-remove-btn"
+                                        class="btn-danger px-3 py-1.5 text-xs" style="display: none;">
+                                        {{ t('admin.settings.custom_background.remove_media') }}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Fit mode -->
+                            <div>
+                                <label class="block text-xs font-bold mb-2">
+                                    {{ t('admin.settings.custom_background.fit_mode') }}
+                                </label>
+                                <div id="custom-bg-size" class="custom-select w-full sm:w-1/2" data-value="cover">
+                                    <button
+                                        class="custom-select-trigger w-full flex items-center justify-between gap-3 px-3 py-2 bg border text-xs cursor-pointer focus:outline-none hover:border-primary transition-colors focus:border-primary"
+                                        type="button">
+                                        <span class="custom-select-value text">
+                                            {{ t('admin.settings.custom_background.fit_cover') }}
+                                        </span>
+                                        <svg class="custom-select-arrow flex-shrink-0 transition-transform duration-200 text-secondary"
+                                            width="12" height="12" viewBox="0 0 12 12">
+                                            <path fill="currentColor" d="M6 9L1 4h10z" />
+                                        </svg>
+                                    </button>
+                                    <div
+                                        class="custom-select-dropdown bg border border-primary max-h-60 overflow-y-auto shadow-lg">
+                                        <div class="custom-select-option px-3 py-2 cursor-pointer hover:surface text-xs"
+                                            data-value="cover">
+                                            {{ t('admin.settings.custom_background.fit_cover') }}
+                                        </div>
+                                        <div class="custom-select-option px-3 py-2 cursor-pointer hover:surface text-xs"
+                                            data-value="contain">
+                                            {{ t('admin.settings.custom_background.fit_contain') }}
+                                        </div>
+                                        <div class="custom-select-option px-3 py-2 cursor-pointer hover:surface text-xs"
+                                            data-value="tile">
+                                            {{ t('admin.settings.custom_background.fit_tile') }}
+                                        </div>
+                                        <div class="custom-select-option px-3 py-2 cursor-pointer hover:surface text-xs"
+                                            data-value="auto">
+                                            {{ t('admin.settings.custom_background.fit_auto') }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Filter sliders -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">
+                                        {{ t('admin.settings.custom_background.opacity') }}
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="custom-bg-opacity" min="0" max="100" value="30" step="1"
+                                            class="flex-1 accent-primary">
+                                        <div
+                                            class="flex items-center bg border text-xs hover:border-primary transition-colors focus-within:border-primary w-14">
+                                            <input type="text" inputmode="numeric" pattern="[0-9]*"
+                                                id="custom-bg-opacity-val" value="30"
+                                                class="w-full min-w-0 bg-transparent py-1 text-right focus:outline-none border-none">
+                                            <span class="text-xs text-secondary pr-2 ml-1 select-none">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">
+                                        {{ t('admin.settings.custom_background.blur') }}
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="custom-bg-blur" min="0" max="50" value="0" step="1"
+                                            class="flex-1 accent-primary">
+                                        <div
+                                            class="flex items-center bg border text-xs hover:border-primary transition-colors focus-within:border-primary w-14">
+                                            <input type="text" inputmode="numeric" pattern="[0-9]*"
+                                                id="custom-bg-blur-val" value="0"
+                                                class="w-full min-w-0 bg-transparent py-1 text-right focus:outline-none border-none">
+                                            <span class="text-xs text-secondary pr-2 ml-1 select-none">px</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">
+                                        {{ t('admin.settings.custom_background.brightness') }}
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="custom-bg-brightness" min="0" max="200" value="100"
+                                            step="1" class="flex-1 accent-primary">
+                                        <div
+                                            class="flex items-center bg border text-xs hover:border-primary transition-colors focus-within:border-primary w-14">
+                                            <input type="text" inputmode="numeric" pattern="[0-9]*"
+                                                id="custom-bg-brightness-val" value="100"
+                                                class="w-full min-w-0 bg-transparent py-1 text-right focus:outline-none border-none">
+                                            <span class="text-xs text-secondary pr-2 ml-1 select-none">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">
+                                        {{ t('admin.settings.custom_background.saturation') }}
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="custom-bg-saturation" min="0" max="200" value="100"
+                                            step="1" class="flex-1 accent-primary">
+                                        <div
+                                            class="flex items-center bg border text-xs hover:border-primary transition-colors focus-within:border-primary w-14">
+                                            <input type="text" inputmode="numeric" pattern="[0-9]*"
+                                                id="custom-bg-saturation-val" value="100"
+                                                class="w-full min-w-0 bg-transparent py-1 text-right focus:outline-none border-none">
+                                            <span class="text-xs text-secondary pr-2 ml-1 select-none">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">
+                                        {{ t('admin.settings.custom_background.contrast') }}
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="custom-bg-contrast" min="0" max="200" value="100"
+                                            step="1" class="flex-1 accent-primary">
+                                        <div
+                                            class="flex items-center bg border text-xs hover:border-primary transition-colors focus-within:border-primary w-14">
+                                            <input type="text" inputmode="numeric" pattern="[0-9]*"
+                                                id="custom-bg-contrast-val" value="100"
+                                                class="w-full min-w-0 bg-transparent py-1 text-right focus:outline-none border-none">
+                                            <span class="text-xs text-secondary pr-2 ml-1 select-none">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">
+                                        {{ t('admin.settings.custom_background.zoom') }}
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="custom-bg-zoom" min="10" max="500" value="100" step="1"
+                                            class="flex-1 accent-primary">
+                                        <div
+                                            class="flex items-center bg border text-xs hover:border-primary transition-colors focus-within:border-primary w-14">
+                                            <input type="text" inputmode="numeric" pattern="[0-9]*"
+                                                id="custom-bg-zoom-val" value="100"
+                                                class="w-full min-w-0 bg-transparent py-1 text-right focus:outline-none border-none">
+                                            <span class="text-xs text-secondary pr-2 ml-1 select-none">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Position sliders -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">
+                                        {{ t('admin.settings.custom_background.position_x') }}
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="custom-bg-position-x" min="0" max="100" value="50"
+                                            step="1" class="flex-1 accent-primary">
+                                        <div
+                                            class="flex items-center bg border text-xs hover:border-primary transition-colors focus-within:border-primary w-14">
+                                            <input type="text" inputmode="numeric" pattern="[0-9]*"
+                                                id="custom-bg-position-x-val" value="50"
+                                                class="w-full min-w-0 bg-transparent py-1 text-right focus:outline-none border-none">
+                                            <span class="text-xs text-secondary pr-2 ml-1 select-none">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">
+                                        {{ t('admin.settings.custom_background.position_y') }}
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="custom-bg-position-y" min="0" max="100" value="50"
+                                            step="1" class="flex-1 accent-primary">
+                                        <div
+                                            class="flex items-center bg border text-xs hover:border-primary transition-colors focus-within:border-primary w-14">
+                                            <input type="text" inputmode="numeric" pattern="[0-9]*"
+                                                id="custom-bg-position-y-val" value="50"
+                                                class="w-full min-w-0 bg-transparent py-1 text-right focus:outline-none border-none">
+                                            <span class="text-xs text-secondary pr-2 ml-1 select-none">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="border-t mt-4 pt-4">
