@@ -66,6 +66,7 @@ class AdminSystem {
 
         // Custom background
         this._customBgMediaId = null;
+        this._settingsLoaded = false;
 
         const customBgSizeElement = document.getElementById('custom-bg-size');
         if (customBgSizeElement) {
@@ -181,6 +182,8 @@ class AdminSystem {
         const enabled = bgEnabled ? bgEnabled.checked : false;
 
         const el = document.getElementById('custom-background');
+
+        if (!this._settingsLoaded) return;
 
         if (!enabled || !this._customBgMediaId) {
             if (el) el.style.display = 'none';
@@ -630,6 +633,7 @@ class AdminSystem {
                     ['custom-bg-brightness', 'custom-bg-brightness-val', 'brightness'],
                     ['custom-bg-saturation', 'custom-bg-saturation-val', 'saturation'],
                     ['custom-bg-contrast', 'custom-bg-contrast-val', 'contrast'],
+                    ['custom-bg-zoom', 'custom-bg-zoom-val', 'zoom'],
                     ['custom-bg-position-x', 'custom-bg-position-x-val', 'position_x'],
                     ['custom-bg-position-y', 'custom-bg-position-y-val', 'position_y'],
                 ];
@@ -643,6 +647,9 @@ class AdminSystem {
                     }
                 });
             }
+
+            this._settingsLoaded = true;
+            this._applyBgPreview();
         } catch (error) {
             console.error('Error loading settings:', error);
         }
