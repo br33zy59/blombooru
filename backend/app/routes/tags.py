@@ -6,9 +6,10 @@ from sqlalchemy.orm import Session
 
 from ..auth import get_current_user, require_admin_mode
 from ..database import get_db
-from ..models import Media, Tag, User, blombooru_media_tags
+from ..models import Media, RatingEnum, Tag, User, blombooru_media_tags
 from ..schemas import TagCategoryEnum, TagCreate, TagResponse
 from ..utils.cache import cache_response, invalidate_tag_cache
+from ..utils.search_parser import apply_search_criteria, parse_search_query
 
 router = APIRouter(prefix="/api/tags", tags=["tags"])
 
@@ -107,6 +108,66 @@ async def autocomplete_tags(
                 seen_tags.add(target.name)
     
     return results
+
+@router.get("/search-related")
+@cache_response(expire=300, key_prefix="search_related")
+async def search_related_tags(
+    request: Request,
+    q: str = Query(default="", description="Search query string"),
+    rating: Optional[str] = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Get tags most commonly co-occurring with the given search query results."""
+    if not q or not q.strip():
+        return []
+
+    parsed = parse_search_query(q)
+
+    # Build media subquery using the full search pipeline
+    media_query = db.query(Media.id)
+    media_query = apply_search_criteria(media_query, parsed, db)
+
+    # Apply top-level rating filter (separate from query string rating: meta)
+    if rating:
+        rating_map = {
+            "safe": RatingEnum.safe,
+            "questionable": RatingEnum.questionable,
+            "explicit": RatingEnum.explicit,
+        }
+        rating_enum = rating_map.get(rating.lower())
+        if rating_enum:
+            media_query = media_query.filter(Media.rating == rating_enum)
+
+    media_subquery = media_query.subquery()
+
+    # Non-negated, non-wildcard tag names to exclude
+    excluded_tag_names = [name.lower() for name in parsed["tags"]["include"]]
+
+    cooccurrence_query = (
+        db.query(
+            Tag,
+            func.count(blombooru_media_tags.c.media_id).label("frequency"),
+        )
+        .join(blombooru_media_tags, blombooru_media_tags.c.tag_id == Tag.id)
+        .filter(blombooru_media_tags.c.media_id.in_(media_subquery))
+        .group_by(Tag.id)
+        .order_by(desc("frequency"))
+        .limit(limit + len(excluded_tag_names))  # over-fetch to allow exclusion
+    )
+
+    results = cooccurrence_query.all()
+
+    return [
+        {
+            "name": tag.name,
+            "category": tag.category,
+            "count": tag.post_count,
+            "frequency": frequency,
+        }
+        for tag, frequency in results
+        if tag.name.lower() not in excluded_tag_names
+    ][:limit]
 
 @router.get("/{tag_name}", response_model=TagResponse)
 @cache_response(expire=3600, key_prefix="tag_detail")
