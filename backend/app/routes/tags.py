@@ -129,15 +129,12 @@ async def search_related_tags(
     media_query = apply_search_criteria(media_query, parsed, db)
 
     # Apply top-level rating filter (separate from query string rating: meta)
-    if rating:
-        rating_map = {
-            "safe": RatingEnum.safe,
-            "questionable": RatingEnum.questionable,
-            "explicit": RatingEnum.explicit,
+    if rating and rating.lower() != "explicit":
+        allowed_ratings = {
+            "safe": [RatingEnum.safe],
+            "questionable": [RatingEnum.safe, RatingEnum.questionable]
         }
-        rating_enum = rating_map.get(rating.lower())
-        if rating_enum:
-            media_query = media_query.filter(Media.rating == rating_enum)
+        media_query = media_query.filter(Media.rating.in_(allowed_ratings.get(rating.lower(), [])))
 
     media_subquery = media_query.subquery()
 
