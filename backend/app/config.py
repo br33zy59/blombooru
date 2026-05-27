@@ -83,6 +83,8 @@ class Settings:
             "items_per_page": 64,
             "default_sort": "uploaded_at",
             "default_order": "desc",
+            "popular_tags_mode": "current_page",
+            "popular_tags_limit": 20,
             "sidebar_filter_mode": "rating",
             "sidebar_custom_buttons": [],
             "media_type_tags": {"image": [], "gif": [], "video": []},
@@ -119,6 +121,14 @@ class Settings:
     def get_default_order(self) -> str:
         """Get default order setting"""
         return self.settings.get("default_order", "desc")
+    
+    def get_popular_tags_mode(self) -> str:
+        """Get popular tags mode: 'current_page' or 'search_related'"""
+        return self.settings.get("popular_tags_mode", "current_page")
+
+    def get_popular_tags_limit(self) -> int:
+        """Get popular tags limit (applies to both modes)"""
+        return int(self.settings.get("popular_tags_limit", 20))
     
     def save_settings(self, settings: dict):
         settings.pop("secret_key", None)
