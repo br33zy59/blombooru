@@ -1,9 +1,9 @@
 ## Updates
 
-**Base path:** `/api/system`
-
 > [!NOTE]
 > Last updated: `April 27, 2026`
+
+**Base path:** `/api/system`
 
 All endpoints require `require_admin_mode`.
 

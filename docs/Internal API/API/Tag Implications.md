@@ -1,9 +1,9 @@
 ## Tag Implications
 
-**Base path:** `/api/tag-implications`
-
 > [!NOTE]
 > Last updated: `April 27, 2026`
+
+**Base path:** `/api/tag-implications`
 
 All endpoints require `require_admin_mode`.
 

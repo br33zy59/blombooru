@@ -1,9 +1,9 @@
 ## Booru Configuration
 
-**Base path:** `/api/booru-config`
-
 > [!NOTE]
 > Last updated: `April 27, 2026`
+
+**Base path:** `/api/booru-config`
 
 Manages credentials for external booru domains used by the importer.
 

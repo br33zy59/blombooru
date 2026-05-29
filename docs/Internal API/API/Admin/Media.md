@@ -1,9 +1,9 @@
 ## Admin: Media
 
-**Base path:** `/api/admin`
-
 > [!NOTE]
 > Last updated: `April 27, 2026`
+
+**Base path:** `/api/admin`
 
 ### Get media statistics
 

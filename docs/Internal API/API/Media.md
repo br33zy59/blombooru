@@ -1,9 +1,9 @@
 ## Media
 
-**Base path:** `/api/media`
-
 > [!NOTE]
 > Last updated: `April 27, 2026`
+
+**Base path:** `/api/media`
 
 ### List media
 

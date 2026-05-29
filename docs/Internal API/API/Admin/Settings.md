@@ -1,9 +1,9 @@
 ## Admin: Settings
 
-**Base path:** `/api/admin`
-
 > [!NOTE]
 > Last updated: `May 29, 2026`
+
+**Base path:** `/api/admin`
 
 ### Get settings
 
