@@ -2,6 +2,9 @@
 
 **Base path:** `/api/tags`
 
+> [!NOTE]
+> Last updated: `April 27, 2026`
+
 ### List / filter tags
 
 ```

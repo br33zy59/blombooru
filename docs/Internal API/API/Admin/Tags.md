@@ -2,6 +2,9 @@
 
 **Base path:** `/api/admin`
 
+> [!NOTE]
+> Last updated: `April 27, 2026`
+
 ### Tag statistics
 
 Requires a valid session.

@@ -2,6 +2,9 @@
 
 **Base path:** `/api/tag-implications`
 
+> [!NOTE]
+> Last updated: `April 27, 2026`
+
 All endpoints require `require_admin_mode`.
 
 Tag implications automatically add a set of implied tags when any of the target tags are applied to media.

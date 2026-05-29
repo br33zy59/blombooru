@@ -2,6 +2,9 @@
 
 **Base path:** `/api/search`
 
+> [!NOTE]
+> Last updated: `April 27, 2026`
+
 ### Search media by tags and metadata
 
 ```

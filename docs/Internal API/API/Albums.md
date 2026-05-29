@@ -2,6 +2,9 @@
 
 **Base path:** `/api/albums`
 
+> [!NOTE]
+> Last updated: `April 27, 2026`
+
 ### List albums
 
 ```

@@ -2,6 +2,9 @@
 
 **Base path:** `/api/admin`
 
+> [!NOTE]
+> Last updated: `May 29, 2026`
+
 ### Get settings
 
 Requires a valid session (JWT only; does not require `admin_mode` cookie).
@@ -57,11 +60,13 @@ Content-Type: application/json
 GET /api/admin/themes
 ```
 
-### Get current theme (public)
+### Get instance info (public)
 
 ```
-GET /api/admin/current-theme
+GET /api/admin/instance-info
 ```
+
+Returns the instance info including theme, version, and if auth is required for media viewing.
 
 ### Get available languages
 

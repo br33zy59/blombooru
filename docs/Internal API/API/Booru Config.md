@@ -2,6 +2,9 @@
 
 **Base path:** `/api/booru-config`
 
+> [!NOTE]
+> Last updated: `April 27, 2026`
+
 Manages credentials for external booru domains used by the importer.
 
 All endpoints require `require_admin_mode`.
