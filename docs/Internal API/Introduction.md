@@ -1,7 +1,7 @@
 # Internal API Reference
 
 > [!WARNING]
-> **Stability notice:** The internal API has no stability guarantees and may change at any time without prior notice. Its intended use case is internal tooling.
+> **Stability notice:** The internal API has no stability guarantees and may change at any time without prior notice. Its intended use case is internal tooling. The docs are also not guaranteed to be up to date with the latest changes in the API.
 
 > [!NOTE]
 > Last updated: `April 27, 2026`  
