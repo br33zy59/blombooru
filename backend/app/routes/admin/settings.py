@@ -90,22 +90,17 @@ async def get_themes():
         "current_theme": settings.CURRENT_THEME
     }
 
-@router.get("/current-theme")
-async def get_current_theme():
-    """Get current theme (public endpoint)"""
-    theme = theme_registry.get_theme(settings.CURRENT_THEME)
-    if theme:
-        return theme.to_dict()
-    return theme_registry.get_theme("default_dark").to_dict()
-
 @router.get("/instance-info")
 async def get_instance_info():
     """Return harmless instance metadata (public, no auth required)."""
+    theme = theme_registry.get_theme(settings.CURRENT_THEME)
+    if not theme:
+        theme = theme_registry.get_theme("default_dark")
     return {
         "app_name": settings.APP_NAME,
         "app_version": APP_VERSION,
         "auth_required": settings.REQUIRE_AUTH,
-        "theme": settings.CURRENT_THEME,
+        "theme": theme.to_dict(),
         "language": settings.CURRENT_LANGUAGE,
     }
 

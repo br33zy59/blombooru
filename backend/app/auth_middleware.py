@@ -24,7 +24,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/api/admin/logout",
             "/api/admin/first-run",
             "/api/admin/onboarding",
-            "/api/admin/current-theme",
             "/api/admin/instance-info",
             "/favicon.ico",
             "/manifest.json",

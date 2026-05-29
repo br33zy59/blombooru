@@ -38,12 +38,12 @@
         // Load theme on page load
         (async function loadTheme() {
             try {
-                const response = await fetch('/api/admin/current-theme');
-                const theme = await response.json();
+                const response = await fetch('/api/admin/instance-info');
+                const data = await response.json();
 
                 const themeLink = document.getElementById('theme-stylesheet');
-                if (themeLink && theme.css_path) {
-                    themeLink.href = theme.css_path + '?v={{ cache_buster }}';
+                if (themeLink && data.theme?.css_path) {
+                    themeLink.href = data.theme.css_path + '?v={{ cache_buster }}';
                 }
             } catch (error) {
                 console.error('Error loading theme:', error);
