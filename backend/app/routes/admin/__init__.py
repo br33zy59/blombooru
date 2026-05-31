@@ -12,6 +12,7 @@ from fastapi import APIRouter
 from .api_keys import router as _api_keys_router
 from .auth import router as _auth_router
 from .backup import router as _backup_router
+from .custom_themes import router as _custom_themes_router
 from .media import router as _media_router
 from .onboarding import router as _onboarding_router
 from .settings import router as _settings_router
@@ -28,3 +29,4 @@ router.include_router(_tags_router)
 router.include_router(_backup_router)
 router.include_router(_api_keys_router)
 router.include_router(_shared_tags_router)
+router.include_router(_custom_themes_router)
