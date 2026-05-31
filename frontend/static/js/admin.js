@@ -31,8 +31,10 @@ class AdminPanel {
         this.system.setupCustomSelects();
         this.system.loadThemes();
         this.system.loadLanguages();
+        this.system.loadCustomThemes();
         this.system.setupApiKeyManagement();
         this.system.setupSystemUpdate();
+
         this.setupStats();
         this.setupTabs();
     }
