@@ -315,23 +315,32 @@ async def get_media(media_id: int, db: Session = Depends(get_db)):
     return result
 
 @router.get("/{media_id}/file")
-async def get_media_file(media_id: int, db: Session = Depends(get_db)):
+async def get_media_file(media_id: int):
     """Serve media file"""
-    media = db.query(Media).filter(Media.id == media_id).first()
-    if not media:
-        raise HTTPException(status_code=404, detail="Media not found")
-    
-    file_path = settings.BASE_DIR / media.path
-    return await serve_media_file(file_path, media.mime_type)
+    db = next(get_db())
+    try:
+        media = db.query(Media).filter(Media.id == media_id).first()
+        if not media:
+            raise HTTPException(status_code=404, detail="Media not found")
+        file_path = settings.BASE_DIR / media.path
+        mime_type = media.mime_type
+    finally:
+        db.close()
+
+    return await serve_media_file(file_path, mime_type)
 
 @router.get("/{media_id}/thumbnail")
-async def get_media_thumbnail(media_id: int, db: Session = Depends(get_db)):
+async def get_media_thumbnail(media_id: int):
     """Serve thumbnail"""
-    media = db.query(Media).filter(Media.id == media_id).first()
-    if not media or not media.thumbnail_path:
-        raise HTTPException(status_code=404, detail="Thumbnail not found")
-    
-    thumb_path = settings.BASE_DIR / media.thumbnail_path
+    db = next(get_db())
+    try:
+        media = db.query(Media).filter(Media.id == media_id).first()
+        if not media or not media.thumbnail_path:
+            raise HTTPException(status_code=404, detail="Thumbnail not found")
+        thumb_path = settings.BASE_DIR / media.thumbnail_path
+    finally:
+        db.close()
+
     return await serve_media_file(thumb_path, "image/jpeg", "Thumbnail file not found")
 
 @router.get("/{media_id}/metadata")

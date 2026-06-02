@@ -38,35 +38,41 @@ async def get_shared_content(share_uuid: str, request: Request, db: Session = De
     raise HTTPException(status_code=404, detail="Shared content not found")
 
 @router.get("/{share_uuid}/file")
-async def get_shared_file(share_uuid: str, request: Request, db: Session = Depends(get_db)):
+async def get_shared_file(share_uuid: str, request: Request):
     """Serve shared media file with metadata stripped if AI metadata not shared"""
     shared_limiter.check(request)
-    media = db.query(Media).filter(
-        Media.share_uuid == share_uuid,
-        Media.is_shared == True
-    ).first()
-    
-    if not media:
-        raise HTTPException(status_code=404, detail="Shared media not found")
-    
-    file_path = settings.BASE_DIR / media.path
-    strip_metadata = not media.share_ai_metadata
-    
-    return await serve_media_file(file_path, media.mime_type, strip_metadata=strip_metadata)
+    db = next(get_db())
+    try:
+        media = db.query(Media).filter(
+            Media.share_uuid == share_uuid,
+            Media.is_shared == True
+        ).first()
+        if not media:
+            raise HTTPException(status_code=404, detail="Shared media not found")
+        file_path = settings.BASE_DIR / media.path
+        mime_type = media.mime_type
+        strip_metadata = not media.share_ai_metadata
+    finally:
+        db.close()
+
+    return await serve_media_file(file_path, mime_type, strip_metadata=strip_metadata)
 
 @router.get("/{share_uuid}/thumbnail")
-async def get_shared_thumbnail(share_uuid: str, request: Request, db: Session = Depends(get_db)):
+async def get_shared_thumbnail(share_uuid: str, request: Request):
     """Serve shared media thumbnail"""
     shared_limiter.check(request)
-    media = db.query(Media).filter(
-        Media.share_uuid == share_uuid,
-        Media.is_shared == True
-    ).first()
-    
-    if not media or not media.thumbnail_path:
-        raise HTTPException(status_code=404, detail="Thumbnail not found")
-    
-    thumb_path = settings.BASE_DIR / media.thumbnail_path
+    db = next(get_db())
+    try:
+        media = db.query(Media).filter(
+            Media.share_uuid == share_uuid,
+            Media.is_shared == True
+        ).first()
+        if not media or not media.thumbnail_path:
+            raise HTTPException(status_code=404, detail="Thumbnail not found")
+        thumb_path = settings.BASE_DIR / media.thumbnail_path
+    finally:
+        db.close()
+
     return await serve_media_file(thumb_path, "image/jpeg", "Thumbnail file not found")
 
 @router.get("/{share_uuid}/metadata")
