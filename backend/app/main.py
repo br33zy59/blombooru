@@ -47,8 +47,10 @@ class DynamicCacheBuster:
 
 CACHE_BUSTER = DynamicCacheBuster(get_cache_buster())
 
-from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.datastructures import MutableHeaders
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send, Message
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -93,8 +95,77 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 
+class SecurityHeadersMiddleware:
+    """Pure ASGI middleware for security headers.
+
+    Directly patches the http.response.start message, avoiding extra
+    memory-stream overhead on large file transfers.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers.append("X-Content-Type-Options", "nosniff")
+                headers.append("X-Frame-Options", "DENY")
+                headers.append("X-XSS-Protection", "1; mode=block")
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+class SelectiveGZipMiddleware:
+    """GZip middleware that skips binary media content types."""
+
+    _SKIP_PREFIXES = ("video/", "image/", "audio/", "application/octet-stream")
+
+    def __init__(self, app: ASGIApp, minimum_size: int = 1000) -> None:
+        self.app = app
+        self.gzip = GZipMiddleware(app, minimum_size=minimum_size)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        decided = False
+        use_gzip = True
+
+        async def inspect_send(message: Message) -> None:
+            nonlocal decided, use_gzip
+            if message["type"] == "http.response.start" and not decided:
+                decided = True
+                headers = dict(
+                    (k.decode("latin-1").lower(), v.decode("latin-1"))
+                    for k, v in message.get("headers", [])
+                )
+                ct = headers.get("content-type", "")
+                if any(ct.startswith(p) for p in self._SKIP_PREFIXES):
+                    use_gzip = False
+            await send(message)
+
+        # Media file endpoints always serve binary content.
+        path = scope.get("path", "")
+        if (
+            path.startswith("/api/media/") and path.endswith("/file")
+            or path.startswith("/api/media/") and path.endswith("/thumbnail")
+            or path.startswith("/api/shared/") and path.endswith("/file")
+            or path.startswith("/api/shared/") and path.endswith("/thumbnail")
+        ):
+            # Skip gzip on known binary media endpoints
+            await self.app(scope, receive, send)
+        else:
+            await self.gzip(scope, receive, send)
+
 app = FastAPI(title="Blombooru", version=APP_VERSION, lifespan=lifespan)
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(SelectiveGZipMiddleware, minimum_size=1000)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -102,14 +173,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    return response
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
