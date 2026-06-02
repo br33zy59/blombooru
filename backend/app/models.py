@@ -1,8 +1,8 @@
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import (Boolean, Column, DateTime, Enum, Float, ForeignKey,
-                        Index, Integer, JSON, String, Table, Text)
+from sqlalchemy import (BigInteger, Boolean, Column, DateTime, Enum, Float,
+                        ForeignKey, Index, Integer, JSON, String, Table, Text)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -34,7 +34,7 @@ class Media(Base):
     hash = Column(String(64), unique=True, index=True)
     file_type = Column(Enum(FileTypeEnum), nullable=False)
     mime_type = Column(String(100))
-    file_size = Column(Integer)
+    file_size = Column(BigInteger)
     width = Column(Integer)
     height = Column(Integer)
     duration = Column(Float, nullable=True)

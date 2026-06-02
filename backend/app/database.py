@@ -184,6 +184,7 @@ def check_and_migrate_schema(engine):
         migrate_add_share_language,
         migrate_add_description,
         migrate_add_implication_patterns,
+        migrate_file_size_to_bigint,
     ]
     
     for migration in migrations:
@@ -276,3 +277,28 @@ def migrate_add_implication_patterns(engine, inspector):
                 "ALTER TABLE blombooru_tag_implications ADD COLUMN target_tag_patterns JSONB"
             ))
         conn.commit()
+
+def migrate_file_size_to_bigint(engine, inspector):
+    """Widen file_size from INTEGER to BIGINT to support files larger than 2 GiB."""
+    from sqlalchemy import text
+
+    if engine.dialect.name == 'sqlite':
+        return
+
+    columns = inspector.get_columns('blombooru_media')
+    for col in columns:
+        if col['name'] == 'file_size':
+            type_name = str(col['type']).upper()
+            if 'BIGINT' in type_name:
+                return
+            break
+    else:
+        return
+
+    logger.info("Migrating file_size column to BIGINT...")
+    with engine.connect() as conn:
+        conn.execute(text(
+            "ALTER TABLE blombooru_media ALTER COLUMN file_size TYPE BIGINT"
+        ))
+        conn.commit()
+
