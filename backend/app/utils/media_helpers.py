@@ -358,6 +358,13 @@ class ChunkedMediaResponse(FileResponse):
             
         return capped_ranges
 
+    async def __call__(self, scope, receive, send) -> None:
+        headers = dict(scope.get("headers", []))
+        if b"range" not in headers:
+            # Force a Range request to prevent streaming the entire file in one go.
+            scope["headers"].append((b"range", b"bytes=0-"))
+        await super().__call__(scope, receive, send)
+
 async def serve_media_file(file_path: Path, mime_type: str, error_message: str = "File not found", strip_metadata: bool = False) -> FileResponse:
     """Serve a media file with error handling, optional metadata stripping, and browser caching."""
     if not file_path.exists():
