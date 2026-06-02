@@ -43,6 +43,11 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(event.request.url);
 
+    // Don't intercept media file/thumbnail requests.
+    if (url.pathname.match(/^\/api\/(media|shared)\/[^/]+\/(file|thumbnail)$/)) {
+        return;
+    }
+
     // Network-first for navigation and API
     if (event.request.mode === 'navigate' || url.pathname.startsWith('/api/')) {
         event.respondWith(
