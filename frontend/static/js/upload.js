@@ -39,7 +39,7 @@ class Uploader {
                 if (data.media_type_tags) {
                     this.mediaTypeTags = {
                         image: data.media_type_tags.image || [],
-                        gif:   data.media_type_tags.gif   || [],
+                        gif: data.media_type_tags.gif || [],
                         video: data.media_type_tags.video || []
                     };
                 }
@@ -67,7 +67,7 @@ class Uploader {
 
             // Look for ANIM chunk in the first 1KB
             for (let i = 12; i < arr.length - 3; i++) {
-                if (arr[i] === 65 && arr[i+1] === 78 && arr[i+2] === 73 && arr[i+3] === 77) {
+                if (arr[i] === 65 && arr[i + 1] === 78 && arr[i + 2] === 73 && arr[i + 3] === 77) {
                     return true;
                 }
             }
@@ -80,7 +80,7 @@ class Uploader {
 
     async getAutoTagsForFile(file) {
         let fileType = 'image';
-        
+
         if (file.type.startsWith('video/')) {
             fileType = 'video';
         } else if (file.type === 'image/gif') {
@@ -241,12 +241,15 @@ class Uploader {
 
     setupDragAndDrop() {
         this.uploadArea.addEventListener('click', () => {
+            if (this.isProcessingFiles) return;
             this.fileInput.click();
         });
 
         this.uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
-            this.uploadArea.classList.add('drag-over');
+            if (!this.isProcessingFiles) {
+                this.uploadArea.classList.add('drag-over');
+            }
         });
 
         this.uploadArea.addEventListener('dragleave', () => {
@@ -256,6 +259,7 @@ class Uploader {
         this.uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             this.uploadArea.classList.remove('drag-over');
+            if (this.isProcessingFiles) return;
 
             const files = Array.from(e.dataTransfer.files);
             this.handleFiles(files);
@@ -264,6 +268,7 @@ class Uploader {
 
     setupFileInput() {
         this.fileInput.addEventListener('change', (e) => {
+            if (this.isProcessingFiles) return;
             const files = Array.from(e.target.files);
             this.handleFiles(files);
         });
@@ -561,40 +566,51 @@ class Uploader {
     }
 
     async computeFileHash(file) {
-        // Check if crypto.subtle is available (HTTPS or localhost)
+        // Sample small slices from the file instead of reading the entire thing
+        // into memory. This keeps usage under 200 KB even for multi-GiB files.
+        // The hash is only used for client-side queue deduplication; the server
+        // computes its own hash for real duplicate detection.
+        const SAMPLE_SIZE = 65536; // 64 KB per sample
+        const slices = [
+            file.slice(0, SAMPLE_SIZE),
+        ];
+        if (file.size > SAMPLE_SIZE * 2) {
+            const mid = Math.floor(file.size / 2);
+            slices.push(file.slice(mid, mid + SAMPLE_SIZE));
+        }
+        if (file.size > SAMPLE_SIZE) {
+            slices.push(file.slice(file.size - SAMPLE_SIZE, file.size));
+        }
+
+        const metaString = `${file.name}|${file.size}|${file.lastModified}|${file.type}`;
+        const metaBytes = new TextEncoder().encode(metaString);
+
+        // Read all slices
+        const sampleBuffers = await Promise.all(slices.map(s => s.arrayBuffer()));
+        const totalLen = metaBytes.length + sampleBuffers.reduce((a, b) => a + b.byteLength, 0);
+        const combined = new Uint8Array(totalLen);
+        let offset = 0;
+        combined.set(metaBytes, offset); offset += metaBytes.length;
+        for (const buf of sampleBuffers) {
+            combined.set(new Uint8Array(buf), offset);
+            offset += buf.byteLength;
+        }
+
+        // Use crypto.subtle if available, otherwise fall back to a simple hash
         if (window.crypto && window.crypto.subtle) {
             try {
-                const arrayBuffer = await file.arrayBuffer();
-                const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
                 const hashArray = Array.from(new Uint8Array(hashBuffer));
-                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                return hashHex;
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
             } catch (error) {
                 console.warn('crypto.subtle failed, falling back to simple hash:', error);
             }
         }
 
-        // Fallback: Use a simple hash based on file properties and content sample
-        const arrayBuffer = await file.arrayBuffer();
-        const bytes = new Uint8Array(arrayBuffer);
-
-        // Create a hash from file metadata and content sample
+        // Simple numeric hash fallback
         let hash = 0;
-        const str = `${file.name}-${file.size}-${file.lastModified}-${file.type}`;
-
-        // Hash the metadata string
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
-        }
-
-        // Sample bytes from the file (beginning, middle, end)
-        const sampleSize = Math.min(1000, bytes.length);
-        const step = Math.max(1, Math.floor(bytes.length / sampleSize));
-
-        for (let i = 0; i < bytes.length; i += step) {
-            hash = ((hash << 5) - hash) + bytes[i];
+        for (let i = 0; i < combined.length; i++) {
+            hash = ((hash << 5) - hash) + combined[i];
             hash = hash & hash;
         }
 
@@ -603,44 +619,65 @@ class Uploader {
     }
 
     async handleFiles(files) {
-        for (const file of files) {
-            // Check if it's a zip or tar.gz file
-            if (file.name.endsWith('.zip') || file.name.endsWith('.tar.gz') || file.name.endsWith('.tgz')) {
-                await this.handleArchive(file);
-                continue;
-            }
+        if (this.isProcessingFiles) return;
+        this.isProcessingFiles = true;
 
-            if (this.isValidFile(file)) {
-                // Compute hash for duplicate detection
-                const hash = await this.computeFileHash(file);
+        // Show loading state on the upload area
+        const originalContent = this.uploadArea.innerHTML;
+        const uploadAreaText = this.uploadArea.querySelector('p');
+        if (uploadAreaText) {
+            uploadAreaText.dataset.originalText = uploadAreaText.textContent;
+            uploadAreaText.textContent = window.i18n.t('upload.progress.processing_files') || 'Processing files...';
+        }
+        this.uploadArea.classList.add('opacity-50', 'pointer-events-none');
 
-                // Silently ignore duplicates
-                if (this.fileHashes.has(hash)) {
+        try {
+            for (const file of files) {
+                // Check if it's a zip or tar.gz file
+                if (file.name.endsWith('.zip') || file.name.endsWith('.tar.gz') || file.name.endsWith('.tgz')) {
+                    await this.handleArchive(file);
                     continue;
                 }
 
-                this.fileHashes.add(hash);
+                if (this.isValidFile(file)) {
+                    // Compute hash for duplicate detection
+                    const hash = await this.computeFileHash(file);
 
-                const fileData = {
-                    file: file,
-                    hash: hash,
-                    rating: this.baseRating,
-                    source: this.baseSource,
-                    additionalTags: await this.getAutoTagsForFile(file),
-                    individualAlbumIds: new Set(),
-                    preview: null,
-                    scannedPath: null
-                };
+                    // Silently ignore duplicates
+                    if (this.fileHashes.has(hash)) {
+                        continue;
+                    }
 
-                this.uploadedFiles.push(fileData);
-                this.createPreview(fileData, this.uploadedFiles.length - 1);
+                    this.fileHashes.add(hash);
+
+                    const fileData = {
+                        file: file,
+                        hash: hash,
+                        rating: this.baseRating,
+                        source: this.baseSource,
+                        additionalTags: await this.getAutoTagsForFile(file),
+                        individualAlbumIds: new Set(),
+                        preview: null,
+                        scannedPath: null
+                    };
+
+                    this.uploadedFiles.push(fileData);
+                    this.createPreview(fileData, this.uploadedFiles.length - 1);
+                }
             }
-        }
 
-        if (this.uploadedFiles.length > 0) {
-            document.getElementById('base-controls').style.display = 'block';
-            document.getElementById('preview-grid').style.display = 'block';
-            document.getElementById('submit-controls').style.display = 'flex';
+            if (this.uploadedFiles.length > 0) {
+                document.getElementById('base-controls').style.display = 'block';
+                document.getElementById('preview-grid').style.display = 'block';
+                document.getElementById('submit-controls').style.display = 'flex';
+            }
+        } finally {
+            this.isProcessingFiles = false;
+            this.uploadArea.classList.remove('opacity-50', 'pointer-events-none');
+            if (uploadAreaText && uploadAreaText.dataset.originalText) {
+                uploadAreaText.textContent = uploadAreaText.dataset.originalText;
+                delete uploadAreaText.dataset.originalText;
+            }
         }
     }
 
@@ -964,27 +1001,41 @@ class Uploader {
         cancelBtn.disabled = true;
         submitBtn.textContent = window.i18n.t('upload.progress.uploading');
 
+        // Lock all controls to prevent edits during upload
+        const baseControls = document.getElementById('base-controls');
+        const previewGrid = document.getElementById('preview-grid');
+        if (baseControls) baseControls.classList.add('opacity-50', 'pointer-events-none');
+        if (previewGrid) previewGrid.classList.add('opacity-50', 'pointer-events-none');
+        this.uploadArea.classList.add('opacity-50', 'pointer-events-none');
+
         let successCount = 0;
         let failCount = 0;
         let duplicateCount = 0;
 
-        for (let i = 0; i < this.uploadedFiles.length; i++) {
-            const fileData = this.uploadedFiles[i];
-            submitBtn.textContent = window.i18n.t('upload.progress.uploading_progress', { current: i + 1, total: this.uploadedFiles.length });
+        try {
+            for (let i = 0; i < this.uploadedFiles.length; i++) {
+                const fileData = this.uploadedFiles[i];
+                submitBtn.textContent = window.i18n.t('upload.progress.uploading_progress', { current: i + 1, total: this.uploadedFiles.length });
 
-            try {
-                await this.uploadFile(fileData);
-                successCount++;
-            } catch (error) {
-                console.error('Upload error:', error);
+                try {
+                    await this.uploadFile(fileData);
+                    successCount++;
+                } catch (error) {
+                    console.error('Upload error:', error);
 
-                // Check if it's a duplicate error (409 status)
-                if (error.message.includes('409') || error.message.includes('already exists')) {
-                    duplicateCount++;
-                } else {
-                    failCount++;
+                    // Check if it's a duplicate error (409 status)
+                    if (error.message.includes('409') || error.message.includes('already exists')) {
+                        duplicateCount++;
+                    } else {
+                        failCount++;
+                    }
                 }
             }
+        } finally {
+            // Unlock controls
+            if (baseControls) baseControls.classList.remove('opacity-50', 'pointer-events-none');
+            if (previewGrid) previewGrid.classList.remove('opacity-50', 'pointer-events-none');
+            this.uploadArea.classList.remove('opacity-50', 'pointer-events-none');
         }
 
         // Show results
