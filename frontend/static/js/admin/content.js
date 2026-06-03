@@ -272,18 +272,23 @@ class AdminContent {
 
                     scanBtn.textContent = window.i18n.t('admin.messages.scan_progress', { current: loadedCount + 1, total: result.new_files });
 
-                    // Fetch the file from the server
-                    const response = await fetch(`/api/admin/get-untracked-file?path=${encodeURIComponent(filePath)}`);
+                    // Fetch the file metadata from the server
+                    const infoResponse = await fetch(`/api/admin/get-untracked-file-info?path=${encodeURIComponent(filePath)}`);
 
-                    if (!response.ok) {
-                        console.error(`Failed to fetch file: ${filePath}`);
+                    if (!infoResponse.ok) {
+                        console.error(`Failed to fetch file info: ${filePath}`);
                         skippedCount++;
                         continue;
                     }
 
-                    const blob = await response.blob();
-                    const filename = filePath.split('/').pop().split('\\').pop(); // Handle both Unix and Windows paths
-                    const file = new File([blob], filename, { type: blob.type });
+                    const info = await infoResponse.json();
+
+                    const file = new File([], info.name, {
+                        type: info.mime_type,
+                        lastModified: Date.now(),
+                    });
+
+                    file._scannedSize = info.size;
 
                     // Add to uploader
                     await uploader.addScannedFile(file, filePath);
