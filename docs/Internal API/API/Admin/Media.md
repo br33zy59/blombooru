@@ -1,7 +1,7 @@
 ## Admin: Media
 
 > [!NOTE]
-> Last updated: `May 31, 2026`
+> Last updated: `June 3, 2026`
 
 **Base path:** `/api/admin`
 
@@ -41,9 +41,21 @@ POST /api/admin/scan-media
 
 **Response:** `{ "new_files": 3, "files": ["/absolute/path/to/file.jpg", ...] }`
 
+### Get untracked file metadata
+
+Requires `require_admin_mode`. Returns lightweight metadata for a scanned file **without serving its binary content**.
+
+```
+GET /api/admin/get-untracked-file-info?path=/absolute/path/to/file.jpg
+```
+
+The path must be an absolute path inside `ORIGINAL_DIR`; requests for paths outside it are rejected with `403`.
+
+**Response:** `{ "name": "file.jpg", "size": 8589934592, "mime_type": "video/mp4" }`
+
 ### Serve untracked file
 
-Requires `require_admin_mode`. Used to preview a scanned file before importing.
+Requires `require_admin_mode`. Streams the raw binary content of a scanned file to the client. Suitable for direct media previews (e.g. as a `<video src>` or `<img src>`).
 
 ```
 GET /api/admin/get-untracked-file?path=/absolute/path/to/file.jpg
