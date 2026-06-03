@@ -811,16 +811,21 @@ class Uploader {
 
         const isVideo = fileData.file.type.startsWith('video/');
 
+        // Scanned files are zero-byte stubs so use the server URL for preview
+        const previewSrc = fileData.scannedPath
+            ? `/api/admin/get-untracked-file?path=${encodeURIComponent(fileData.scannedPath)}`
+            : URL.createObjectURL(fileData.file);
+
         if (isVideo) {
             const video = document.createElement('video');
             video.className = 'w-full h-24 object-cover';
-            video.src = URL.createObjectURL(fileData.file);
+            video.src = previewSrc;
             video.muted = true;
             thumbnailDiv.appendChild(video);
         } else {
             const img = document.createElement('img');
             img.className = 'w-full h-24 object-cover';
-            img.src = URL.createObjectURL(fileData.file);
+            img.src = previewSrc;
             thumbnailDiv.appendChild(img);
         }
 
@@ -841,7 +846,9 @@ class Uploader {
             if (this.selectedFileIndex === clickedIndex) {
                 const fileData = this.uploadedFiles[clickedIndex];
                 if (fileData && fileData.file) {
-                    const src = URL.createObjectURL(fileData.file);
+                    const src = fileData.scannedPath
+                        ? `/api/admin/get-untracked-file?path=${encodeURIComponent(fileData.scannedPath)}`
+                        : URL.createObjectURL(fileData.file);
                     const isVideo = fileData.file.type.startsWith('video/');
                     this.fullscreenViewer.open(src, isVideo);
                 }
@@ -1211,8 +1218,21 @@ class Uploader {
 
     async addScannedFile(file, originalPath) {
         if (this.isValidFile(file)) {
-            // Compute hash for duplicate detection
-            const hash = await this.computeFileHash(file);
+            const realSize = file._scannedSize ?? file.size;
+            const metaString = `${file.name}|${realSize}|${file.type}|${originalPath}`;
+            const metaBytes = new TextEncoder().encode(metaString);
+            let hash;
+            if (window.crypto && window.crypto.subtle) {
+                try {
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', metaBytes);
+                    hash = Array.from(new Uint8Array(hashBuffer))
+                        .map(b => b.toString(16).padStart(2, '0')).join('');
+                } catch (_) {
+                    hash = originalPath; // fallback: path is already unique
+                }
+            } else {
+                hash = originalPath;
+            }
 
             // Silently ignore duplicates
             if (this.fileHashes.has(hash)) {
