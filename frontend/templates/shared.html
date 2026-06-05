@@ -5,7 +5,7 @@
 
 {% block pwa %}{% endblock %}
 
-{% block title %}{% if media %}{{ media.filename }} - {% endif %}Shared - {{ app_name }}{% endblock %}
+{% block title %}{{ t('shared.shared_media') }} - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
 {% if media %}
