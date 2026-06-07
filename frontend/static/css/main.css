@@ -193,6 +193,15 @@ span.checked:hover {
     background-color: var(--tag-meta);
 }
 
+.tag-suggestion.tag-create-new {
+    background-color: color-mix(in srgb, var(--primary-color) 8%, var(--surface));
+}
+
+.tag-suggestion.tag-create-new:hover,
+.tag-suggestion.tag-create-new.selected {
+    background-color: color-mix(in srgb, var(--primary-color) 18%, var(--surface));
+}
+
 /* Tag styling */
 .tag-category {
     display: inline-block;
