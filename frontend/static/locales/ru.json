@@ -340,7 +340,9 @@
             "tags_to_add": "Теги к добавлению",
             "tags_without_prefix": "Теги без префикса будут добавлены в категорию \"Общие (general)\"",
             "title": "Управление тегами",
-            "total_tags": "Всего тегов"
+            "total_tags": "Всего тегов",
+            "create_tag": "",
+            "create_tag_submit": ""
         },
         "tags_implications": {
             "title": "Связки тегов",
@@ -852,6 +854,7 @@
             "tag_updated": "",
             "error_updating_tag": "",
             "tag_name_conflict": "",
+            "tag_created": "",
             "tags_added_successfully": "Теги успешно добавлены!",
             "tags_already_exist": "Все теги уже существуют или являются псевдонимами.",
             "tags_created": "Созданы теги:",

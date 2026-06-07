@@ -340,7 +340,9 @@
             "tags_to_add": "Taggar att lägga till",
             "tags_without_prefix": "Taggar utan prefix läggs till som \"allmän\" kategori.",
             "title": "Tagghantering",
-            "total_tags": "Totalt antal taggar"
+            "total_tags": "Totalt antal taggar",
+            "create_tag": "Skapa Tagg",
+            "create_tag_submit": "Skapa"
         },
         "tags_implications": {
             "title": "Taggimplikationer",
@@ -852,6 +854,7 @@
             "tag_updated": "Tagg '{old_name}' uppdaterad",
             "error_updating_tag": "Fel vid uppdatering av tagg",
             "tag_name_conflict": "Tagg eller taggalias med detta namn existerar redan",
+            "tag_created": "Tagg '{name}' skapad",
             "tags_added_successfully": "Taggar tillagda!",
             "tags_already_exist": "Alla taggar finns redan eller är alias.",
             "tags_created": "Taggar skapade:",

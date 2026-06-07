@@ -340,7 +340,9 @@
             "tags_to_add": "Tags to Add",
             "tags_without_prefix": "Tags without a prefix will be added as \"general\" category.",
             "title": "Tags Management",
-            "total_tags": "Total Tags"
+            "total_tags": "Total Tags",
+            "create_tag": "Create Tag",
+            "create_tag_submit": "Create"
         },
         "tags_implications": {
             "title": "Tag Implications",
@@ -852,6 +854,7 @@
             "tag_updated": "Tag '{old_name}' updated successfully",
             "error_updating_tag": "Error updating tag",
             "tag_name_conflict": "A tag or alias with this name already exists",
+            "tag_created": "Tag '{name}' created",
             "tags_added_successfully": "Tags added successfully!",
             "tags_already_exist": "All tags already exist or are aliases.",
             "tags_created": "Tags created:",

@@ -340,7 +340,9 @@
             "tags_to_add": "待添加标签",
             "tags_without_prefix": "不带前缀的标签将被添加为“常规”类别。",
             "title": "标签管理",
-            "total_tags": "标签总数"
+            "total_tags": "标签总数",
+            "create_tag": "",
+            "create_tag_submit": ""
         },
         "tags_implications": {
             "title": "",
@@ -852,6 +854,7 @@
             "tag_updated": "",
             "error_updating_tag": "",
             "tag_name_conflict": "",
+            "tag_created": "",
             "tags_added_successfully": "标签添加成功！",
             "tags_already_exist": "所有标签已存在或已作为别名存在。",
             "tags_created": "已创建标签：",
