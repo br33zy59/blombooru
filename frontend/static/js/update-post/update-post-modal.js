@@ -97,8 +97,11 @@ class UpdatePostModal extends UpdatePostModalBase {
         }
         this._urlImport._fullscreenViewer = this._fullscreenViewer;
 
+        this.hide();
+
         this._urlImport.build(() => {
             this._fullscreenViewer = this._urlImport._fullscreenViewer;
+            this._urlImport.hide();
             this._buildSourcePicker();
         });
     }
@@ -109,8 +112,11 @@ class UpdatePostModal extends UpdatePostModalBase {
         }
         this._deviceUpload._fullscreenViewer = this._fullscreenViewer;
 
+        this.hide();
+
         this._deviceUpload.build(() => {
             this._fullscreenViewer = this._deviceUpload._fullscreenViewer;
+            this._deviceUpload.hide();
             this._buildSourcePicker();
         });
     }
