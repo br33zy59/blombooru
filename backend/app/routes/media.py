@@ -128,7 +128,8 @@ async def update_from_source(
 
         import requests as _requests
         try:
-            dl = _requests.get(req.file_url, timeout=60, stream=True)
+            headers = {"User-Agent": "Blombooru/1.0 (booru-import)"}
+            dl = _requests.get(req.file_url, headers=headers, timeout=60, stream=True)
             dl.raise_for_status()
         except _requests.HTTPError as e:
             raise HTTPException(status_code=502, detail=safe_error_detail("Failed to download replacement file", e))
