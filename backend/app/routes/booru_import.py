@@ -157,7 +157,7 @@ async def download_and_import(
     try:
         suffix = Path(post.filename).suffix or ".png"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            for chunk in response.iter_content(chunk_size=8192):
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
                 tmp.write(chunk)
             tmp_path = Path(tmp.name)
     except Exception as e:
@@ -180,7 +180,7 @@ async def download_and_import(
         import shutil
         shutil.move(str(tmp_path), str(file_path))
 
-        metadata = process_media_file(file_path)
+        metadata = process_media_file(file_path, precalculated_hash=file_hash)
 
         thumbnail_name = Path(unique_filename).stem
         thumbnail_filename = f"{thumbnail_name}.jpg"

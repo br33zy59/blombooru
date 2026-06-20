@@ -161,7 +161,7 @@ async def update_from_source(
             shutil.move(str(tmp_path), str(old_file))
             tmp_path = None
 
-            new_meta = process_media_file(old_file)
+            new_meta = process_media_file(old_file, precalculated_hash=new_hash)
 
             # Regenerate thumbnail
             if media.thumbnail_path:
@@ -268,7 +268,7 @@ async def update_file_finalize(
 
         shutil.rmtree(chunk_dir, ignore_errors=True)
 
-        new_meta = process_media_file(old_file)
+        new_meta = process_media_file(old_file, precalculated_hash=new_hash)
 
         # Regenerate thumbnail
         if media.thumbnail_path:
@@ -378,7 +378,7 @@ def process_and_save_media(
             detail=f"Media already exists (duplicate of {existing.filename})",
         )
 
-    metadata = process_media_file(file_path)
+    metadata = process_media_file(file_path, precalculated_hash=file_hash)
     logger.debug(f"Media processed: {metadata}")
 
     thumbnail_filename = Path(unique_filename).stem + ".jpg"
@@ -657,8 +657,7 @@ async def upload_media(
             if not file_path.exists() or not file_path.is_file():
                 raise HTTPException(status_code=404, detail="File not found")
             
-            # Calculate hash from existing file
-            file_hash = calculate_file_hash(file_path)
+            # file_hash is calculated inside process_and_save_media
             unique_filename = file_path.name  # Keep original name
             
         else:
@@ -667,8 +666,6 @@ async def upload_media(
                 raise HTTPException(status_code=400, detail="Either file or scanned_path is required")
             
             contents = await file.read()
-            file_hash = hashlib.sha256(contents).hexdigest()
-            media_uuid = str(uuid.uuid4())
             
             unique_filename = get_unique_filename(settings.ORIGINAL_DIR, file.filename)
             file_path = settings.ORIGINAL_DIR / unique_filename

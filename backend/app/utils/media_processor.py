@@ -9,13 +9,35 @@ from PIL import Image
 from ..schemas import FileTypeEnum
 from .logger import logger
 
+_HASH_CACHE = {}
+
 def calculate_file_hash(file_path: Path) -> str:
-    """Calculate MD5 hash of a file"""
+    """Calculate MD5 hash of a file with caching for recently scanned files"""
+    try:
+        stat = file_path.stat()
+        cache_key = (str(file_path.resolve()), stat.st_mtime, stat.st_size)
+        if cache_key in _HASH_CACHE:
+            return _HASH_CACHE[cache_key]
+    except OSError:
+        cache_key = None
+
     hash_md5 = hashlib.md5()
     with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
+        # Read in 8MB chunks for optimal throughput on large files
+        for chunk in iter(lambda: f.read(8 * 1024 * 1024), b""):
             hash_md5.update(chunk)
-    return hash_md5.hexdigest()
+            
+    result = hash_md5.hexdigest()
+    
+    if cache_key is not None:
+        _HASH_CACHE[cache_key] = result
+        # Keep cache size bounded
+        if len(_HASH_CACHE) > 1000:
+            keys_to_remove = list(_HASH_CACHE.keys())[:500]
+            for k in keys_to_remove:
+                _HASH_CACHE.pop(k, None)
+                
+    return result
 
 def get_mime_type(file_path: Path) -> str:
     """Get MIME type of a file"""
@@ -94,10 +116,10 @@ def get_video_info(file_path: Path) -> Optional[dict]:
     except Exception:
         return None
 
-def process_media_file(file_path: Path) -> dict:
+def process_media_file(file_path: Path, precalculated_hash: Optional[str] = None) -> dict:
     """Process media file and extract metadata"""
     file_size = file_path.stat().st_size
-    file_hash = calculate_file_hash(file_path)
+    file_hash = precalculated_hash if precalculated_hash else calculate_file_hash(file_path)
     mime_type = get_mime_type(file_path)
     file_type = determine_file_type(mime_type, file_path.name, file_path)
     

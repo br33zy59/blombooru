@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..models import Media
 from .logger import logger
-from .media_processor import calculate_file_hash
+from .media_processor import calculate_file_hash, get_mime_type
 
 SUPPORTED_EXTENSIONS = {
     'image': ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tiff'],
@@ -67,6 +67,10 @@ def find_untracked_media(db: Session) -> dict:
             abs_path = str(file_path.resolve())
             
             if abs_path in tracked_paths:
+                continue
+            
+            mime_type = get_mime_type(file_path)
+            if not mime_type.startswith('image/') and not mime_type.startswith('video/') and mime_type not in ('application/x-matroska', 'application/vnd.rn-realmedia'):
                 continue
             
             file_hash = calculate_file_hash(file_path)
