@@ -153,9 +153,11 @@ class BooruImporter {
                     <!-- Thumbnail -->
                     <div class="flex-shrink-0">
                         ${post.preview_url
-                ? `<img src="/api/booru-import/proxy-image?url=${encodeURIComponent(post.preview_url)}" alt="Preview" 
-                                    class="w-32 h-32 object-contain surface border" 
-                                    onerror="this.style.display='none'">`
+                ? `<div class="w-32 h-32 surface border relative overflow-hidden" style="background-image: linear-gradient(90deg, var(--surface) 0%, color-mix(in srgb, var(--surface-light), var(--surface) 40%) 50%, var(--surface) 100%); background-size: 200% 100%; animation: skeleton-wave 2s infinite linear;" id="booru-thumb-wrap">
+                                    <img src="/api/booru-import/proxy-image?url=${encodeURIComponent(post.preview_url)}" alt="Preview"
+                                        class="w-full h-full object-contain opacity-0 transition-opacity duration-300"
+                                        onload="this.style.opacity='1'; this.closest('#booru-thumb-wrap').style.animation='none'; this.closest('#booru-thumb-wrap').style.backgroundImage='none';"
+                                        onerror="this.style.display='none'; this.closest('#booru-thumb-wrap').style.animation='none'; this.closest('#booru-thumb-wrap').style.backgroundImage='none';"></div>`
                 : '<div class="w-32 h-32 surface border flex items-center justify-center text-xs text-secondary">' + window.i18n.t('common.none') + '</div>'
             }
                     </div>
