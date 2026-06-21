@@ -139,6 +139,87 @@ class DanbooruClient(BooruClient):
 
         return f"booru_{data.get('id', 'unknown')}"
 
+    def _dtext_to_plain(self, text: str) -> str:
+        """
+        Convert Danbooru DText markup to plain readable text.
+
+        Handles the subset of DText used in artist commentaries:
+        - [b]...[/b]             - bold; kept as plain text
+        - "label":[url]          - named link; rendered as "label (url)"
+        - \<url\>                - bare URL angle-bracket link; rendered as the URL
+        - [i]...[/i]             - italic; kept as plain text
+        - [s]...[/s]             - strikethrough; kept as plain text
+        - [u]...[/u]             - underline; kept as plain text
+        - [tn]...[/tn]           - translator's note; kept as plain text
+        - [spoiler]...[/spoiler] - kept as plain text
+        - [[wiki_link]]          - double-bracket wiki links; kept as plain text
+        - [expand]...[/expand]   - kept as plain text
+        """
+        # Named links: "label":[url]  ->  label (url)
+        # The label may itself contain quoted text so match non-greedily.
+        text = re.sub(
+            r'"([^"]+?)":\[([^\]]+?)\]',
+            lambda m: f'{m.group(1)} ({m.group(2)})',
+            text,
+        )
+        # Named links with plain URL (no brackets): "label":https://...
+        text = re.sub(
+            r'"([^"]+?)":(https?://\S+)',
+            lambda m: f'{m.group(1)} ({m.group(2)})',
+            text,
+        )
+        # Bare angle-bracket URLs: <https://...>  ->  https://...
+        text = re.sub(r'<(https?://[^>]+)>', r'\1', text)
+        # Strip block/section tags (keep content between them)
+        text = re.sub(r'\[section(?:=[^\]]+)?\]|\[/section\]', '', text, flags=re.IGNORECASE)
+        # Strip inline formatting tags (keep content)
+        text = re.sub(r'\[/?(?:b|i|u|s|tn|spoiler|expand|quote)\]', '', text, flags=re.IGNORECASE)
+        # Wiki double-bracket links: [[page_name]] or [[page_name|display]]
+        text = re.sub(r'\[\[(?:[^|\]]+\|)?([^\]]+)\]\]', r'\1', text)
+        # Decode HTML entities (Danbooru API may return &amp; etc.)
+        text = html.unescape(text)
+        # Normalise Windows-style line endings
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        return text.strip()
+
+    def _fetch_artist_commentary(self, post_id: int) -> Optional[str]:
+        """
+        Fetch the artist commentary for a post and return it as plain text.
+
+        Combines the original title and original description (both converted
+        from DText) into a single string.  Returns None if there is no
+        commentary or if the request fails.
+        """
+        url = f"{self.base_url}/posts/{post_id}/artist_commentary.json"
+        try:
+            response = self.session.get(url, timeout=10)
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            data = response.json()
+        except Exception as e:
+            logger.debug(f"Could not fetch artist commentary for post {post_id}: {e}")
+            return None
+
+        title = (data.get("original_title") or "").strip()
+        body = (data.get("original_description") or "").strip()
+
+        # Prefer translated versions when available
+        translated_title = (data.get("translated_title") or "").strip()
+        translated_body = (data.get("translated_description") or "").strip()
+        if translated_title:
+            title = translated_title
+        if translated_body:
+            body = translated_body
+
+        parts = []
+        if title:
+            parts.append(self._dtext_to_plain(title))
+        if body:
+            parts.append(self._dtext_to_plain(body))
+
+        return "\n\n".join(parts) if parts else None
+
     def fetch_post(self, post_id: int) -> BooruPost:
         url = f"{self.base_url}/posts/{post_id}.json"
         data = self._request_with_retry(url)
@@ -149,6 +230,8 @@ class DanbooruClient(BooruClient):
 
         file_url = data.get("file_url") or data.get("large_file_url")
         preview_url = data.get("preview_file_url") or data.get("large_file_url")
+
+        description = self._fetch_artist_commentary(post_id)
 
         return BooruPost(
             id=data.get("id", post_id),
@@ -163,6 +246,7 @@ class DanbooruClient(BooruClient):
             file_size=data.get("file_size", 0),
             score=data.get("score", 0),
             booru_url=f"{self.base_url}/posts/{data.get('id', post_id)}",
+            description=description,
         )
 
     def search_posts(self, tags: str = "", page: int = 1, limit: int = 20) -> List[BooruPost]:

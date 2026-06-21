@@ -36,6 +36,7 @@ class ImportRequest(BaseModel):
     rating: Optional[str] = None
     tags: Optional[list[str]] = None
     source: Optional[str] = None
+    description: Optional[str] = None
     album_ids: Optional[list[int]] = None
     auto_create_tags: bool = False
     category_hints: Optional[dict[str, str]] = None
@@ -98,6 +99,7 @@ async def fetch_booru_post(
         "file_size": post.file_size,
         "score": post.score,
         "booru_url": post.booru_url,
+        "description": post.description,
     }
 
 @router.post("/download")
@@ -198,6 +200,7 @@ async def download_and_import(
         final_rating = req.rating or post.rating
         final_source = req.source if req.source is not None else (post.source or post.booru_url)
         final_tags = req.tags if req.tags is not None else [t.name for t in post.tags]
+        final_description = req.description if req.description is not None else post.description
 
         media = Media(
             filename=unique_filename,
@@ -212,6 +215,7 @@ async def download_and_import(
             duration=metadata['duration'],
             rating=final_rating,
             source=final_source if final_source else None,
+            description=final_description if final_description else None,
         )
 
         # Handle tags

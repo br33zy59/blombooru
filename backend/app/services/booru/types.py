@@ -23,3 +23,4 @@ class BooruPost:
     file_size: int = 0
     score: int = 0
     booru_url: str = ""
+    description: Optional[str] = None
