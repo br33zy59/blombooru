@@ -56,6 +56,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send, Message
 async def lifespan(app: FastAPI):
     """Application lifespan handler (startup and shutdown)"""
     cleanup_task = None
+    dead_cache_task = None
     # Startup
     if settings.DEBUG:
         logger.warning("DEBUG MODE ENABLED - DO NOT USE IN PRODUCTION")
@@ -83,6 +84,27 @@ async def lifespan(app: FastAPI):
 
             cleanup_task = asyncio.create_task(periodic_upload_chunks_cleanup())
 
+            # Start periodic dead-cache cleanup task
+            async def periodic_dead_cache_cleanup():
+                from .database import SessionLocal
+                from .utils.media_helpers import cleanup_dead_media_cache
+                while True:
+                    await asyncio.sleep(6 * 3600)  # Every 6 hours
+                    try:
+                        if SessionLocal is None:
+                            continue
+                        db = SessionLocal()
+                        try:
+                            cleanup_dead_media_cache(db)
+                        finally:
+                            db.close()
+                    except asyncio.CancelledError:
+                        break
+                    except Exception as e:
+                        logger.error(f"Dead cache cleanup error: {e}")
+
+            dead_cache_task = asyncio.create_task(periodic_dead_cache_cleanup())
+
             logger.info("Blombooru started successfully")
         except Exception as e:
             logger.error(f"Error during startup: {e}")
@@ -94,6 +116,8 @@ async def lifespan(app: FastAPI):
     # Shutdown
     if cleanup_task:
         cleanup_task.cancel()
+    if dead_cache_task:
+        dead_cache_task.cancel()
     try:
         from .routes.ai_tagger import shutdown_tagger_resources
         shutdown_tagger_resources()

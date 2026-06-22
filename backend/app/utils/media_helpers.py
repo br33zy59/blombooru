@@ -408,6 +408,84 @@ def delete_media_cache(file_path: Path):
     except Exception as e:
         logger.error(f"Error deleting media cache for {file_path}: {e}")
 
+def cleanup_dead_media_cache(db) -> int:
+    """Remove cache files that no longer correspond to any media in the database."""
+    import hashlib
+    
+    from ..config import settings
+    from ..models import Media
+    
+    if not settings.CACHE_DIR.exists():
+        return 0
+    
+    base_dir = settings.BASE_DIR.resolve()
+    
+    # Build the set of cache filenames that are currently valid.
+    # A cache entry is valid if the original file exists on disk; its
+    # expected cache name is derived from the current mtime so we never
+    # accidentally delete a freshly-queued entry.
+    valid_names: set[str] = set()
+    try:
+        all_media = db.query(Media).filter(
+            Media.mime_type.like("image/%")
+        ).all()
+    except Exception as e:
+        logger.error(f"cleanup_dead_media_cache: DB query failed: {e}")
+        return 0
+
+    for media in all_media:
+        try:
+            raw_path = settings.BASE_DIR / media.path
+            try:
+                file_path = raw_path.resolve()
+                if not file_path.is_relative_to(base_dir):
+                    logger.warning(
+                        f"cleanup_dead_media_cache: skipping out-of-tree path {media.path!r}"
+                    )
+                    continue
+            except (ValueError, OSError):
+                continue
+
+            if not file_path.exists():
+                continue
+
+            stat = file_path.stat()
+            cache_key = f"{str(file_path)}_{stat.st_mtime}"
+            expected_name = hashlib.md5(cache_key.encode()).hexdigest() + "_" + file_path.name
+            valid_names.add(expected_name)
+        except Exception as e:
+            logger.warning(f"cleanup_dead_media_cache: skipping media id={media.id}: {e}")
+
+    deleted = 0
+    try:
+        for entry in settings.CACHE_DIR.iterdir():
+            if entry.is_dir():
+                continue
+            # Leave in-progress atomic write temps alone
+            if entry.suffix == ".tmp":
+                continue
+            # Only act on plain files; skip symlinks, sockets, etc.
+            if not entry.is_file() or entry.is_symlink():
+                continue
+            if entry.name not in valid_names:
+                try:
+                    entry.unlink()
+                    deleted += 1
+                    logger.debug(f"Removed dead cache file: {entry.name}")
+                except FileNotFoundError:
+                    pass  # Already gone
+                except Exception as unlink_err:
+                    logger.error(f"Error removing dead cache file {entry}: {unlink_err}")
+    except Exception as e:
+        logger.error(f"cleanup_dead_media_cache: directory scan failed: {e}")
+
+    if deleted:
+        logger.info(
+            f"Dead cache cleanup: removed {deleted} orphaned file(s) from {settings.CACHE_DIR}"
+        )
+
+    return deleted
+
 def sanitize_filename(filename: str, fallback: str = "file") -> str:
     """Sanitize filename to be safe for filesystem and web."""
     import re

@@ -797,6 +797,7 @@ async def delete_media(
     tag_ids = [tag.id for tag in media.tags]
     
     file_path = settings.BASE_DIR / media.path
+    delete_media_cache(file_path)
     file_path.unlink(missing_ok=True)
     
     if media.thumbnail_path:
