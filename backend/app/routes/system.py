@@ -56,16 +56,24 @@ def parse_version(version_str: str) -> tuple:
 def github_get(path: str, params: dict = None) -> requests.Response:
     """Make a GET request to the GitHub API with standard headers and timeout."""
     url = f"{GITHUB_API_BASE}{path}" if path.startswith("/") else path
-    headers = {
+    base_headers = {
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
     
     token = os.environ.get("GITHUB_TOKEN")
     if token:
-        headers["Authorization"] = f"Bearer {token}"
-        
-    return requests.get(url, headers=headers, params=params, timeout=GITHUB_TIMEOUT)
+        headers = {**base_headers, "Authorization": f"Bearer {token}"}
+        resp = requests.get(url, headers=headers, params=params, timeout=GITHUB_TIMEOUT)
+        if resp.status_code == 401:
+            logger.warning(
+                "GITHUB_TOKEN is invalid or expired (got 401). "
+                "Retrying without authentication. Update GITHUB_TOKEN in your .env file."
+            )
+            return requests.get(url, headers=base_headers, params=params, timeout=GITHUB_TIMEOUT)
+        return resp
+
+    return requests.get(url, headers=base_headers, params=params, timeout=GITHUB_TIMEOUT)
 
 class ReleaseInfo(BaseModel):
     tag: str
