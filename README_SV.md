@@ -451,7 +451,7 @@ Du har två sätt att lägga till nya taggar:
 
 #### 1. CSV-import
 
-Använd antingen något i stil med [detta skript](https://github.com/DraconicDragon/danbooru-e621-tag-list-processor) av DraconicDragon för att skrapa din egen lista, eller använd en av de för-skrapade listorna [härifrån](https://civitai.com/models/950325/danboorue621-autocomplete-tag-lists-incl-aliases-krita-ai-support) eller [härifrån](https://github.com/DraconicDragon/dbr-e621-lists-archive/tree/main/tag-lists/danbooru).
+Använd antingen något liknande [detta skript](https://github.com/DraconicDragon/danbooru-e621-tag-list-processor) från DraconicDragon för att skrapa din egen lista, eller använd den senaste färdigskrapade listan [härifrån](https://github.com/DraconicDragon/dbr-e621-lists-archive/tree/main/tag-lists/danbooru).
 
 > [!IMPORTANT]
 > Se till att din CSV-lista följer formatet som specificeras i sektionen "Import Tags from CSV" som visas nedan. För närvarande är endast CSV-listor i "Danbooru"-stil (genererade av skriptet eller funna i de länkade arkiven) fullt kompatibla.

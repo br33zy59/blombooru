@@ -431,7 +431,7 @@ BLOMBOORU_TAG=pre docker compose up -d
 
 #### 1. CSV импорт
 
-Используйте [этот скрипт](https://github.com/DraconicDragon/danbooru-e621-tag-list-processor) от DraconicDragon чтобы заскрейпить ваш список, или используйте один из списков [отсюда](https://civitai.com/models/950325/danboorue621-autocomplete-tag-lists-incl-aliases-krita-ai-support) или [отсюда](https://github.com/DraconicDragon/dbr-e621-lists-archive/tree/main/tag-lists/danbooru).
+Используйте [этот скрипт](https://github.com/DraconicDragon/danbooru-e621-tag-list-processor) от DraconicDragon чтобы заскрейпить ваш список, или используйте один из списков [отсюда](https://github.com/DraconicDragon/dbr-e621-lists-archive/tree/main/tag-lists/danbooru).
 
 > [!IMPORTANT]
 > Убедитесь, что ваш CSV имеет формат, указанный в секции "Импорт тегов из CSV" (ниже). В данный момент, только "Danbooru"-подобные CSV списки (сгенерированные скриптом или скачанные выше) совместимы.

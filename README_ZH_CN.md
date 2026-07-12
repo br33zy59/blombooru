@@ -438,7 +438,7 @@ docker compose -f docker-compose.dev.yml up --build -d
 
 #### 1. CSV 导入
 
-您可以使用由 DraconicDragon 编写的[此脚本](https://github.com/DraconicDragon/danbooru-e621-tag-list-processor)来爬取自己的列表，或者使用来自 [此处](https://civitai.com/models/950325/danboorue621-autocomplete-tag-lists-incl-aliases-krita-ai-support) 或 [此处](https://github.com/DraconicDragon/dbr-e621-lists-archive/tree/main/tag-lists/danbooru) 的预爬取列表。
+您可以使用由 DraconicDragon 编写的[此脚本](https://github.com/DraconicDragon/danbooru-e621-tag-list-processor)来爬取自己的列表，或者使用来自 [此处](https://github.com/DraconicDragon/dbr-e621-lists-archive/tree/main/tag-lists/danbooru) 的最新预爬取列表。
 
 > [!IMPORTANT]
 > 请确保您的 CSV 列表符合下文“从 CSV 导入标签”部分指定的格式。目前，仅由上述脚本生成或在链接存档中找到的“Danbooru”风格 CSV 列表完全兼容。
