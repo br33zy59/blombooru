@@ -1054,6 +1054,10 @@ class Uploader {
             if (baseControls) baseControls.classList.remove('opacity-50', 'pointer-events-none');
             if (previewGrid) previewGrid.classList.remove('opacity-50', 'pointer-events-none');
             this.uploadArea.classList.remove('opacity-50', 'pointer-events-none');
+
+            submitBtn.disabled = false;
+            cancelBtn.disabled = false;
+            submitBtn.textContent = originalText;
         }
 
         // Show results
