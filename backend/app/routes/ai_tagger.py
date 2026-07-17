@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -14,7 +13,6 @@ from sqlalchemy.orm import Session
 
 from ..auth import require_admin_mode
 from ..config import settings
-from ..utils.logger import logger
 from ..utils.request_helpers import safe_error_detail
 from ..database import get_db
 from ..models import Media, User
@@ -71,6 +69,70 @@ def filter_tags(tags: List[dict], blacklisted_tags: List[str]) -> List[dict]:
         if not any(pattern.match(tag["name"]) for pattern in compiled_patterns):
             filtered.append(tag)
     return filtered
+
+def enrich_predicted_tags(tags: List[dict], db: Session) -> List[dict]:
+    """Resolve aliases, apply implications, enforce categories, and deduplicate tag predictions."""
+    if not tags:
+        return []
+
+    from sqlalchemy import func
+    from ..models import Tag
+    from ..utils.tag_utils import expand_implications, resolve_aliases
+
+    raw_names = [t["name"].strip().lower() for t in tags]
+    
+    # Resolve aliases
+    alias_map = resolve_aliases(db, raw_names)
+
+    canonical_names = set()
+    for raw in raw_names:
+        if raw in alias_map:
+            canonical_names.add(alias_map[raw][0])
+        else:
+            canonical_names.add(raw)
+            
+    # Fetch local existing tags
+    existing_tags = db.query(Tag).filter(func.lower(Tag.name).in_(canonical_names)).all()
+    tag_set: dict[int, Tag] = {t.id: t for t in existing_tags}
+    
+    # Expand implications
+    expand_implications(db, tag_set)
+
+    # Deduplicate and rebuild final list
+    seen = set()
+    enriched = []
+    
+    # Add the original requested tags first (resolved aliases, updated categories)
+    for t in tags:
+        raw = t["name"].strip().lower()
+        if not raw:
+            continue
+            
+        canonical_name = alias_map[raw][0] if raw in alias_map else raw
+        if canonical_name in seen:
+            continue
+        seen.add(canonical_name)
+        
+        existing_match = next((t_obj for t_obj in tag_set.values() if t_obj.name == canonical_name), None)
+        if existing_match:
+            t["name"] = existing_match.name
+            t["category"] = existing_match.category
+        else:
+            t["name"] = canonical_name
+            # keep the AI tagger's original predicted category if it doesn't exist locally
+            
+        enriched.append(t)
+        
+    for implied in tag_set.values():
+        if implied.name not in seen:
+            seen.add(implied.name)
+            enriched.append({
+                "name": implied.name,
+                "category": implied.category,
+                "confidence": 1.0
+            })
+            
+    return enriched
 
 class PredictTagsRequest(BaseModel):
     general_threshold: float = 0.35
@@ -304,10 +366,11 @@ async def predict_tags(
         
         blacklisted_tags = settings.WD_TAGGER_SETTINGS.get("blacklisted_tags", [])
         filtered_predictions = filter_tags(predictions, blacklisted_tags)
+        enriched_predictions = enrich_predicted_tags(filtered_predictions, db)
         
         return PredictTagsResponse(
             media_id=media_id,
-            tags=[PredictedTag(**tag) for tag in filtered_predictions],
+            tags=[PredictedTag(**tag) for tag in enriched_predictions],
             model_used=request.model_name
         )
     
@@ -407,9 +470,10 @@ async def predict_tags_batch(
             media_id = path_to_media_id.get(file_path)
             if media_id is not None:
                 filtered_tags = filter_tags(tags, blacklisted_tags)
+                enriched_tags = enrich_predicted_tags(filtered_tags, db)
                 results.append(PredictTagsResponse(
                     media_id=media_id,
-                    tags=[PredictedTag(**tag) for tag in filtered_tags],
+                    tags=[PredictedTag(**tag) for tag in enriched_tags],
                     model_used=request.model_name
                 ))
         
@@ -512,11 +576,12 @@ async def predict_tags_stream(
                 
                 blacklisted_tags = settings.WD_TAGGER_SETTINGS.get("blacklisted_tags", [])
                 filtered_tags = filter_tags(tags, blacklisted_tags)
+                enriched_tags = enrich_predicted_tags(filtered_tags, db)
                 
                 event = {
                     "type": "result",
                     "media_id": media_id,
-                    "tags": filtered_tags,
+                    "tags": enriched_tags,
                     "progress": processed,
                     "total": total
                 }

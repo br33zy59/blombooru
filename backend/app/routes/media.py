@@ -7,9 +7,8 @@ from typing import List, Optional
 from fastapi import (APIRouter, BackgroundTasks, Depends, File, Form,
                      HTTPException, Query, Request, UploadFile)
 from fastapi.responses import FileResponse
-from PIL import Image
 from pydantic import BaseModel
-from sqlalchemy import and_, desc, func, or_, text
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from ..auth import require_admin_mode
@@ -20,9 +19,7 @@ from ..models import (Album, Media, Tag, User, blombooru_album_media,
                       blombooru_media_tags)
 from ..schemas import (AlbumListResponse, MediaCreate, MediaResponse,
                        MediaUpdate, RatingEnum, ShareSettingsUpdate)
-from ..utils.album_utils import (get_album_rating, get_bulk_album_metrics,
-                                 get_media_count, get_random_thumbnails,
-                                 update_album_last_modified)
+from ..utils.album_utils import (get_bulk_album_metrics, update_album_last_modified)
 from ..utils.cache import (cache_response, invalidate_album_cache,
                            invalidate_media_cache, invalidate_media_item_cache,
                            invalidate_tag_cache)
@@ -318,10 +315,10 @@ def update_tag_counts(db: Session, tag_ids: List[int]):
             {"post_count": count_map.get(tag_id, 0)},
             synchronize_session=False
         )
-        
+
 def get_or_create_tags(db: Session, tag_names: List[str], category_hints: Optional[dict] = None) -> List[Tag]:
-    """Get or create tags by name.
-    
+    """Get or create tags by name, resolving aliases and applying implications.
+
     Args:
         db: Database session
         tag_names: List of tag name strings
@@ -330,28 +327,43 @@ def get_or_create_tags(db: Session, tag_names: List[str], category_hints: Option
                        When a tag doesn't exist and a hint is provided, the tag
                        is created with that category instead of the default "general".
     """
-    seen = set()
-    unique_names = []
+    from ..models import TagAlias
+    from ..utils.tag_utils import expand_implications, resolve_aliases
+
+    # Deduplicate input names
+    seen_names: set[str] = set()
+    unique_names: list[str] = []
     for name in tag_names:
         name = name.strip().lower()
-        if not name or name in seen:
+        if not name or name in seen_names:
             continue
-        seen.add(name)
+        seen_names.add(name)
         unique_names.append(name)
 
-    tags = []
+    alias_map = resolve_aliases(db, unique_names)
+
+    tag_set: dict[int, Tag] = {}
+
     for name in unique_names:
-        tag = db.query(Tag).filter(Tag.name == name).first()
-        if not tag:
-            category = "general"
-            if category_hints and name in category_hints:
-                category = category_hints[name]
-            tag = Tag(name=name, post_count=0, category=category)
-            db.add(tag)
-            db.flush()
-        tags.append(tag)
-    
-    return tags
+        if name in alias_map:
+            alias = db.query(TagAlias).filter(TagAlias.alias_name == name).first()
+            tag = alias.target_tag if alias else None
+        else:
+            tag = db.query(Tag).filter(Tag.name == name).first()
+            if not tag:
+                category = "general"
+                if category_hints and name in category_hints:
+                    category = category_hints[name]
+                tag = Tag(name=name, post_count=0, category=category)
+                db.add(tag)
+                db.flush()
+
+        if tag and tag.id not in tag_set:
+            tag_set[tag.id] = tag
+
+    expand_implications(db, tag_set)
+
+    return list(tag_set.values())
 
 def process_and_save_media(
     db: Session,
