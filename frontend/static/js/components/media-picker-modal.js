@@ -157,7 +157,6 @@ class MediaPickerModal {
         const root = this.root;
 
         // Close
-        root.querySelector('.mpicker-backdrop').addEventListener('click', () => this.close());
         root.querySelector('.mpicker-cancel-btn').addEventListener('click', () => this.close());
 
         // Search
