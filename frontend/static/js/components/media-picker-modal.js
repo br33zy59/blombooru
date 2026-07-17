@@ -612,15 +612,44 @@ class MediaPickerModal {
         }
 
         // Thumbnail
+        const link = document.createElement('a');
+        link.className = 'block w-full h-full aspect-square pointer-events-none';
+
         const img = document.createElement('img');
-        img.src = `/api/media/${media.id}/thumbnail${media.hash ? '?v=' + media.hash : ''}`;
         img.alt = media.filename || `Media ${media.id}`;
         img.loading = 'lazy';
-        img.className = 'w-full aspect-square object-cover transition-all';
+        img.className = 'w-full h-full object-cover transition-colors';
         img.draggable = false;
+
+        const markLoaded = () => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    img.classList.add('loaded');
+                });
+            });
+        };
+
+        img.onload = () => {
+            if (img.decode) {
+                img.decode().then(markLoaded).catch(markLoaded);
+            } else {
+                markLoaded();
+            }
+        };
+
         img.onerror = () => {
+            img.classList.add('loaded');
             img.src = '/static/images/no-thumbnail.png';
         };
+
+        img.src = `/api/media/${media.id}/thumbnail${media.hash ? '?v=' + media.hash : ''}`;
+
+        if (img.complete && img.naturalWidth > 0) {
+            markLoaded();
+        }
+
+        link.appendChild(img);
+        item.appendChild(link);
 
         // Selection overlay
         const overlay = document.createElement('div');
@@ -669,7 +698,6 @@ class MediaPickerModal {
             this._toggleItemSelection(media, item, e);
         });
 
-        item.appendChild(img);
         item.appendChild(overlay);
         item.appendChild(indicator);
 

@@ -414,14 +414,37 @@ class MediaViewer extends MediaViewerBase {
         link.href = `/media/${media.id}${queryString ? '?' + queryString : ''}`;
 
         const img = document.createElement('img');
-        img.src = `/api/media/${media.id}/thumbnail${media.hash ? '?v=' + media.hash : ''}`;
         img.alt = media.filename;
         img.loading = 'lazy';
         img.className = 'transition-colors';
+
+        const markLoaded = () => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    img.classList.add('loaded');
+                });
+            });
+        };
+
+        img.onload = () => {
+            if (img.decode) {
+                img.decode().then(markLoaded).catch(markLoaded);
+            } else {
+                markLoaded();
+            }
+        };
+
         img.onerror = () => {
             console.error(window.i18n.t('media.errors.failed_load_thumbnail', { id: media.id }));
+            img.classList.add('loaded');
             img.src = '/static/images/no-thumbnail.png';
         };
+
+        img.src = `/api/media/${media.id}/thumbnail${media.hash ? '?v=' + media.hash : ''}`;
+
+        if (img.complete && img.naturalWidth > 0) {
+            markLoaded();
+        }
 
         link.appendChild(img);
         item.appendChild(link);
