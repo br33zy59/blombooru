@@ -3,7 +3,6 @@ from typing import Dict, List, Tuple
 
 from sqlalchemy.orm import Session
 
-
 def resolve_aliases(db: Session, raw_names: List[str]) -> Dict[str, Tuple[str, str]]:
     """Build an alias lookup map for a list of (already lowercased) tag names."""
     from ..models import TagAlias
@@ -16,7 +15,6 @@ def resolve_aliases(db: Session, raw_names: List[str]) -> Dict[str, Tuple[str, s
         a.alias_name: (a.target_tag.name, a.target_tag.category)
         for a in aliases
     }
-
 
 def expand_implications(db: Session, tag_set: Dict[int, object]) -> None:
     """Recursively expand tag implications into *tag_set*, mutating it in place."""
