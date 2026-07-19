@@ -10,7 +10,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-%2338B2AC.svg?style=flat-square&logo=tailwind-css&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=fff)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?&style=flat-square&logo=discord&logoColor=white)](https://discord.gg/ywpaZh4tHx)
+[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/ywpaZh4tHx)
 
 
 <a href="./README.md">English</a> • **Русский** • <a href="./README_ZH_CN.md">简体中文</a> • <a href="./README_SV.md">Svenska</a>
